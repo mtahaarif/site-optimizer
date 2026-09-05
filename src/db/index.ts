@@ -63,7 +63,17 @@ function pool(): Pool {
   const ssl = sslFor(connectionString);
   const p = new Pool({
     connectionString,
-    max: 5,
+    // One connection per process, not five.
+    //
+    // Every serverless invocation is its own process with its own pool, so
+    // `max` multiplies by concurrent invocations rather than capping anything
+    // globally — a 40-page crawl of this app fanned out to hundreds of
+    // connections and the database started refusing them outright ("too many
+    // connections for role ..."), which surfaces as an error page on every
+    // route. Cross-request reuse is the pooler's job (Neon/PgBouncer, the
+    // POSTGRES_URL with `-pooler` in the host); this pool only needs to serve
+    // one invocation at a time.
+    max: 1,
     idleTimeoutMillis: 10_000,
     // Never let a wedged connection hold a serverless invocation open until
     // the platform kills it — fail fast enough to render a real error page.
