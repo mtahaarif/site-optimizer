@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const host = raw.length > 25 ? raw.slice(0, 25) + '…' : raw; // keep the title under 60 chars
   return pageMeta({
     title: `Compare audits · ${host}`,
-    description: `How ${host} has changed between audits: score, page count and issue trends, plus which checks were fixed and which appeared since the previous crawl.`,
+    description: `How ${host} changed between audits: score, pages and issues over time, plus the checks fixed or newly broken since the previous crawl.`,
     path: `/crawl/${id}/compare`,
   });
 }
