@@ -13,9 +13,38 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { Pool, type PoolClient } from 'pg';
 import { MIGRATIONS } from './schema.ts';
 
-const connectionString = process.env['POSTGRES_URL']
+const conn = (): string | undefined =>
+  process.env['POSTGRES_URL']
   ?? process.env['DATABASE_URL']
   ?? process.env['POSTGRES_URL_NON_POOLING'];
+
+/**
+ * Is a database configured at all?
+ *
+ * Read at call time, never captured at module load: on Vercel the module can
+ * be evaluated while building a static shell, long before the deployment's
+ * environment variables are the ones that matter at request time.
+ */
+export function dbConfigured(): boolean {
+  return !!conn()?.trim();
+}
+
+export const DB_NOT_CONFIGURED =
+  'No database configured. Set POSTGRES_URL (or DATABASE_URL) — the connection '
+  + 'string Vercel Postgres gives you when you add the integration.';
+
+/**
+ * Hosted Postgres (Neon, Supabase, RDS…) requires TLS; a local one usually has
+ * none. Connection strings from Vercel already carry `sslmode=require`, and
+ * where they do the driver's own parsing wins — this only fills in the gap for
+ * a bare `postgres://user:pass@host/db` pointed at something remote, which
+ * would otherwise fail the handshake with a bewildering error.
+ */
+function sslFor(connectionString: string): { rejectUnauthorized: boolean } | undefined {
+  if (/[?&]sslmode=/i.test(connectionString)) return undefined;
+  const local = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/i.test(connectionString);
+  return local ? undefined : { rejectUnauthorized: true };
+}
 
 const g = globalThis as unknown as { __sitecheckerPool?: Pool; __sitecheckerMigrated?: Promise<void> };
 
@@ -28,13 +57,22 @@ const g = globalThis as unknown as { __sitecheckerPool?: Pool; __sitecheckerMigr
  */
 function pool(): Pool {
   if (g.__sitecheckerPool) return g.__sitecheckerPool;
-  if (!connectionString) {
-    throw new Error(
-      'No database configured. Set POSTGRES_URL (or DATABASE_URL) — ' +
-      'the connection string Vercel Postgres gives you when you add the integration.',
-    );
-  }
-  const p = new Pool({ connectionString, max: 5, idleTimeoutMillis: 10_000 });
+  const connectionString = conn()?.trim();
+  if (!connectionString) throw new Error(DB_NOT_CONFIGURED);
+
+  const ssl = sslFor(connectionString);
+  const p = new Pool({
+    connectionString,
+    max: 5,
+    idleTimeoutMillis: 10_000,
+    // Never let a wedged connection hold a serverless invocation open until
+    // the platform kills it — fail fast enough to render a real error page.
+    connectionTimeoutMillis: 10_000,
+    ...(ssl ? { ssl } : {}),
+  });
+  // A pool that emits 'error' with no listener takes the process down with it,
+  // and an idle backend being closed by the provider is routine, not fatal.
+  p.on('error', () => { /* the next query re-connects */ });
   g.__sitecheckerPool = p;
   return p;
 }

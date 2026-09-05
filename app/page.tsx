@@ -1,7 +1,8 @@
 import { connection } from 'next/server';
 import Link from 'next/link';
 import { listReports, loadReport } from '@/src/crawler/store.ts';
-import { listSites } from '@/src/db/index.ts';
+import { listSites, dbConfigured } from '@/src/db/index.ts';
+import { SetupRequired } from './setup-required.tsx';
 import { gscConfigured } from '@/src/core/gsc/auth.ts';
 import { ga4Configured } from '@/src/core/ga4/client.ts';
 import { jsDependentPages } from '@/src/core/aeo/analyze.ts';
@@ -79,6 +80,10 @@ function BigNum({ value, sub, tone }: { value: string | number; sub: string; ton
 
 export default async function Dashboard() {
   await connection();
+
+  // Checked after connection() so the value read is the running deployment's,
+  // not one captured while prerendering a static shell.
+  if (!dbConfigured()) return <SetupRequired />;
 
   const [reports, sites] = [await listReports(), await listSites()];
   const gscOn = gscConfigured();

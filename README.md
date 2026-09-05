@@ -1147,6 +1147,18 @@ SENDGRID_API_KEY / RESEND_API_KEY / ALERT_WEBHOOK_URL   uptime + backlink alerts
 deploy`. The schema migrates itself on first query — there is no build-time
 migration step.
 
+**Environment variables only reach a deployment that was built after they were
+added.** Adding `POSTGRES_URL` to a project that is already deployed does
+nothing until you redeploy (Deployments → ⋯ → Redeploy, or push a commit). An
+app that is up but has no database renders a setup page explaining this rather
+than an error, and `/api/health` reports which of *configured* and *reachable*
+is false:
+
+```bash
+curl https://your-app.vercel.app/api/health
+# {"ok":true,"database":{"configured":true,"reachable":true,"schemaVersion":10,"sites":0}}
+```
+
 **4. Wire up scheduling** — see [Scheduling](#scheduling) below. The dashboard
 itself never re-crawls, monitors, or checks ranks on its own; something has to
 invoke the scripts. GitHub Actions is the free option and needs the same

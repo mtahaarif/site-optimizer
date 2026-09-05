@@ -14,6 +14,12 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   cacheComponents: true,
 
+  // `pg` resolves optional native bindings (pg-native) through dynamic requires
+  // that bundlers rewrite badly — the classic symptom is a module-not-found at
+  // runtime for a dependency that is plainly installed. Loading it as a real
+  // Node module instead of a bundled one avoids the whole class of problem.
+  serverExternalPackages: ['pg'],
+
   // Playwright is an optional dependency used only by the `--render-js` crawl
   // path, which needs a real Chromium binary and therefore only ever runs
   // locally or self-hosted. Left alone, output tracing follows the dynamic
