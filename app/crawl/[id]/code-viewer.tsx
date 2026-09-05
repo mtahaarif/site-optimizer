@@ -156,6 +156,7 @@ export function CodeViewer({
       {snippet && (
         <div className="scroll-x">
           <table className="w-full border-collapse font-mono text-[11.5px] leading-[1.7]">
+            <caption className="sr-only">Source lines surrounding the finding</caption>
             <tbody>
               {snippet.lines.map((line, i) => {
                 const isTarget = i === snippet.highlightIndex;

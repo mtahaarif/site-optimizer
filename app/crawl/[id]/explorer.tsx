@@ -113,6 +113,7 @@ export function PageExplorer({ report }: { report: AuditReport }) {
 
       <div className="scroll-x">
         <table className="w-full min-w-[1000px] border-collapse font-mono text-[12px]">
+          <caption className="sr-only">Every crawled page with type, sitemap membership and score</caption>
           <thead>
             <tr className="border-b border-line text-muted">
               {th('url', 'Page')}

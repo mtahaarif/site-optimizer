@@ -188,6 +188,7 @@ export function ProjectAudits({ crawls }: { crawls: ProjectCrawl[] }) {
   return (
     <div className="scroll-x">
       <table className="w-full min-w-[520px] border-collapse font-mono text-[12px]">
+        <caption className="sr-only">Every audit of this project by date, score and issue count</caption>
         <thead>
           <tr className="border-b border-line text-left text-[10px] uppercase tracking-[0.1em] text-muted">
             <th className="pb-2 pr-4">Date</th>

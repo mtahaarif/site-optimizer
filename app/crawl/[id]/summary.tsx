@@ -436,6 +436,7 @@ function CheckRow({ outcome, report, crawlId, open, onToggle }: {
           {outcome.affected.length > 0 && outcome.scope === 'page' && (
             <div className="scroll-x mt-3 max-h-72 overflow-y-auto rounded border border-line">
               <table className="w-full min-w-[520px] border-collapse font-mono text-[11.5px]">
+                <caption className="sr-only">Pages affected by this check</caption>
                 <tbody>
                   {outcome.affected.map((a, i) => (
                     <tr key={a.url + i} className="border-b border-line/50 last:border-0">

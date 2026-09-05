@@ -86,8 +86,9 @@ function DownloadBtn({ text, name }: { text: string; name: string }) {
 }
 
 export function Manage({
-  origin, robotsText, robotsError, sitemaps,
+  crawlId, origin, robotsText, robotsError, sitemaps,
 }: {
+  crawlId: string;
   origin: string;
   robotsText: string | null;
   robotsError: string | null;
@@ -101,7 +102,10 @@ export function Manage({
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <Link href="../" className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted hover:text-ink">← Report</Link>
+        {/* Absolute, not "../": resolved against /crawl/<id>/manage, a relative
+            "../" climbs to /crawl/ — a route that does not exist, so the back
+            link 404s and the crawler reports a broken internal link. */}
+        <Link href={`/crawl/${crawlId}`} className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted hover:text-ink">← Report</Link>
         <h1 className="mt-3 text-[28px] font-normal tracking-tight">
           Robots &amp; sitemap · {origin.replace(/^https?:\/\//, '')}
         </h1>
@@ -202,6 +206,7 @@ export function Manage({
         ) : (
           <div className="scroll-x">
             <table className="w-full min-w-[560px] border-collapse font-mono text-[12px]">
+              <caption className="sr-only">Discovered XML sitemaps with URL count and status</caption>
               <thead>
                 <tr className="border-b border-line text-left text-[10px] uppercase tracking-[0.1em] text-muted">
                   <th className="pb-2 pr-4">Sitemap</th>

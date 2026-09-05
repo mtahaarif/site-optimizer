@@ -54,6 +54,7 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
 
   return (
     <Manage
+      crawlId={id}
       origin={report.origin}
       robotsText={robots.text}
       robotsError={robots.error}

@@ -13,6 +13,21 @@ import type { Metadata } from 'next';
  * Paths stay relative: Next resolves them against `metadataBase`, so canonical
  * and og:url resolve from the same origin and agree by construction.
  */
+/**
+ * The generated card from app/opengraph-image.tsx.
+ *
+ * Referenced explicitly rather than relying on the file convention: Next
+ * attaches a generated image automatically only to the segment that declares
+ * it, so the root file covered `/` and left the other eleven routes emitting
+ * `twitter:card: summary_large_image` with no image to show.
+ */
+const OG_IMAGE = {
+  url: '/opengraph-image',
+  width: 1200,
+  height: 630,
+  alt: 'SiteChecker — technical SEO audits, rank tracking and AI visibility',
+};
+
 export function pageMeta(opts: {
   title: string;
   description: string;
@@ -30,11 +45,13 @@ export function pageMeta(opts: {
       title,
       description,
       url: path,
+      images: [OG_IMAGE],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
+      images: [OG_IMAGE],
     },
   };
 }

@@ -98,6 +98,7 @@ export function TrafficCard({ report }: { report: AuditReport }) {
           </div>
           <div className="scroll-x">
             <table className="w-full min-w-[640px] border-collapse font-mono text-[11.5px]">
+              <caption className="sr-only">Search and analytics metrics per page</caption>
               <thead>
                 <tr className="border-b border-line text-left text-[9.5px] uppercase tracking-[0.1em] text-muted">
                   <th className="pb-1.5 pr-3">Page</th>

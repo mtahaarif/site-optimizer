@@ -133,6 +133,7 @@ DATAFORSEO_PASSWORD=...</pre>
         ) : (
           <div className="scroll-x">
             <table className="w-full min-w-[860px] border-collapse font-mono text-[12px]">
+              <caption className="sr-only">Tracked keywords with current position, movement and ranking URL</caption>
               <thead>
                 <tr className="border-b border-line text-left text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
                   <th className="pb-2 pr-3 text-right">Pos</th>

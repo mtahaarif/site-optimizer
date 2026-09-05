@@ -150,6 +150,7 @@ export default async function InsightsPage() {
           <Panel title="Top search terms" subtitle="The phrases people typed before landing on your site.">
             <div className="scroll-x">
               <table className="w-full min-w-[620px] border-collapse text-[13px]">
+                <caption className="sr-only">Top search terms by clicks and impressions</caption>
                 <thead className="border-b border-line bg-surface-2">
                   <tr><Th>Search term</Th><Th right>Clicks</Th><Th right>Impressions</Th><Th right>CTR</Th><Th right>Position</Th></tr>
                 </thead>
@@ -174,6 +175,7 @@ export default async function InsightsPage() {
           <Panel title="Top pages in search" subtitle="Which of your pages bring in the most visits from Google.">
             <div className="scroll-x">
               <table className="w-full min-w-[620px] border-collapse text-[13px]">
+                <caption className="sr-only">Top pages in search by clicks and impressions</caption>
                 <thead className="border-b border-line bg-surface-2">
                   <tr><Th>Page</Th><Th right>Clicks</Th><Th right>Impressions</Th><Th right>CTR</Th><Th right>Position</Th></tr>
                 </thead>
@@ -210,6 +212,7 @@ export default async function InsightsPage() {
           <Panel title="Most visited pages" subtitle="Where your visitors actually spend their time.">
             <div className="scroll-x">
               <table className="w-full min-w-[680px] border-collapse text-[13px]">
+                <caption className="sr-only">Most visited pages by visits and people</caption>
                 <thead className="border-b border-line bg-surface-2">
                   <tr><Th>Page</Th><Th right>Visits</Th><Th right>People</Th><Th right>Views</Th><Th right>Left right away</Th><Th right>Avg. time</Th></tr>
                 </thead>

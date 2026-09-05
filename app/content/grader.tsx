@@ -115,6 +115,7 @@ export function ContentGrader({
 
       <div className="scroll-x border border-line bg-surface">
         <table className="w-full min-w-[720px] border-collapse text-[13px]">
+          <caption className="sr-only">Pages available to grade, with word count and content quality score</caption>
           <thead className="border-b border-line bg-surface-2">
             <tr>
               <th className="w-8 px-3 py-2"></th>

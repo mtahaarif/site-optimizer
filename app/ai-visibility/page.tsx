@@ -144,6 +144,7 @@ export default async function AiVisibilityPage({
         tone={aeo.blockedCritical.length ? 'bad' : 'good'}>
         <div className="scroll-x">
           <table className="w-full min-w-[640px] border-collapse text-[13px]">
+            <caption className="sr-only">Answer engines and whether robots.txt allows each one</caption>
             <thead className="border-b border-line bg-surface-2">
               <tr>
                 <th className="px-6 py-2 text-left text-[11px] font-medium text-muted">Answer engine</th>
@@ -188,6 +189,7 @@ export default async function AiVisibilityPage({
         ) : (
           <div className="scroll-x">
             <table className="w-full min-w-[620px] border-collapse text-[13px]">
+              <caption className="sr-only">Pages compared by words an AI sees versus words a visitor sees</caption>
               <thead className="border-b border-line bg-surface-2">
                 <tr>
                   <th className="px-6 py-2 text-left text-[11px] font-medium text-muted">Page</th>

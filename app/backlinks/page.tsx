@@ -113,6 +113,7 @@ node scripts/backlinks.ts https://example.com`}</pre>
 
             <div className="scroll-x">
               <table className="w-full min-w-[820px] border-collapse font-mono text-[12px]">
+                <caption className="sr-only">Tracked backlinks with status, rel attribute, referring page and anchor</caption>
                 <thead>
                   <tr className="border-b border-line text-left text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
                     <th className="pb-2 pr-3">Status</th>
