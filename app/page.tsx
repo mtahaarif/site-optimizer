@@ -10,18 +10,19 @@ import { keywordsWithRanks } from '@/src/ranks/track.ts';
 import { backlinkSummary } from '@/src/backlinks/verify.ts';
 import { ScoreDial, scoreBand, shortUrl, SEVERITY_ORDER, SEVERITY_LABEL } from './ui.tsx';
 import type { Severity } from '@/src/core/scoring/model.ts';
+import { pageMeta } from './meta.ts';
 
-// Reads live data from SQLite, so there is no static shell to prerender.
+// Reads live data from Postgres, so there is no static shell to prerender.
 export const instant = false;
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
 
-export const metadata = {
+export const metadata = pageMeta({
   title: 'Dashboard — your site health at a glance',
   description: 'Your latest audit score, most important pages, search rankings, AI visibility and backlinks — the whole picture on one screen.',
-  alternates: { canonical: '/' },
-};
+  path: '/',
+});
 
 const SEVERITY_COLOR: Record<Severity, string> = {
   blocker: 'rgb(var(--blocker))',

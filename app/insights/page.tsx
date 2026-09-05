@@ -3,13 +3,14 @@ import { fetchPageMetrics, fetchQueryMetrics, defaultRange } from '@/src/core/gs
 import { gscConfigured, gscSiteUrl } from '@/src/core/gsc/auth.ts';
 import { fetchGa4Metrics, ga4Configured, ga4PropertyId } from '@/src/core/ga4/client.ts';
 import { ConnectGuide } from './connect-guide.tsx';
+import { pageMeta } from '../meta.ts';
 
 export const instant = false;
-export const metadata = {
+export const metadata = pageMeta({
   title: 'Search & traffic insights',
   description: 'See what people search to find you, which pages bring the most visits, and how your search results are performing.',
-  alternates: { canonical: '/insights' },
-};
+  path: '/insights',
+});
 
 const nf = (n: number) => n.toLocaleString();
 const pct = (n: number) => (n * 100).toFixed(1) + '%';

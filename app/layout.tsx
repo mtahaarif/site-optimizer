@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Sidebar } from './nav.tsx';
 import { ThemeToggle } from './theme-toggle.tsx';
+import { siteUrl } from './site-url.ts';
 
 // Runs before paint: applies the saved theme (or the OS preference) so there is
 // no flash of the wrong palette on load.
@@ -24,9 +25,9 @@ const jetbrainsMono = JetBrains_Mono({
   variable: '--font-mono',
 });
 
-// Absolute base for canonical + Open Graph URLs. Set SITE_URL to your real
-// domain in production; falls back to the local dev origin.
-const SITE_URL = process.env['SITE_URL'] ?? 'http://localhost:3000';
+// Absolute base for canonical + Open Graph URLs. Resolved from the deployment
+// itself, so a Vercel deploy is correct with no configuration. See site-url.ts.
+const SITE_URL = siteUrl();
 const DESCRIPTION =
   'Run deep technical SEO audits, track your rankings across Google, Bing, Yahoo and Yandex, and monitor uptime and backlinks — all in one place.';
 

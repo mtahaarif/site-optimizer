@@ -7,13 +7,14 @@ import { ScoreDial, shortUrl } from '../ui.tsx';
 import { Section, MeterBar, ActionRow, SitePicker } from '../panel.tsx';
 import { LlmsFile } from './llms-file.tsx';
 import { Recheck } from './recheck.tsx';
+import { pageMeta } from '../meta.ts';
 
 export const instant = false;
-export const metadata = {
+export const metadata = pageMeta({
   title: 'AI visibility',
   description: 'Whether ChatGPT, Claude, Perplexity and Google’s AI answers can reach, read and understand your website — with the fixes, in order.',
-  alternates: { canonical: '/ai-visibility' },
-};
+  path: '/ai-visibility',
+});
 
 async function fetchText(url: string, limit = 40_000): Promise<string | null> {
   try {

@@ -10,6 +10,7 @@ import {
   type ProjectCrawl, type IssueRef,
 } from './project-view.tsx';
 import { DeleteProject } from './delete-project.tsx';
+import { pageMeta } from '../../meta.ts';
 
 export const instant = false;
 
@@ -18,11 +19,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const site = await getSite(Number(id));
   const raw = site ? site.origin.replace(/^https?:\/\//, '') : 'Project';
   const host = raw.length > 25 ? raw.slice(0, 25) + '…' : raw; // keep the title under 60 chars
-  return {
+  return pageMeta({
     title: `${host} — audit history`,
     description: `Audit history for ${host}: health over time, every failing check across crawls, and what changed since the first audit.`,
-    alternates: { canonical: `/project/${id}` },
-  };
+    path: `/project/${id}`,
+  });
 }
 
 type OutcomeLike = { id: string; title: string; severity: Severity; status: string };

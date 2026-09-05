@@ -3,15 +3,16 @@ import { listSites } from '@/src/db/index.ts';
 import { listBacklinks, backlinkSummary } from '@/src/backlinks/verify.ts';
 import { gscConfigured } from '@/src/backlinks/gsc.ts';
 import { Stat } from '../ui.tsx';
+import { pageMeta } from '../meta.ts';
 
-// Reads live data from SQLite, so there is no static shell to prerender.
+// Reads live data from Postgres, so there is no static shell to prerender.
 export const instant = false;
 
-export const metadata = {
+export const metadata = pageMeta({
   title: 'Backlink monitoring & lost-link alerts',
   description: 'Track the links pointing to your site: which are still live, which are dofollow, and which have disappeared — with alerts on the ones worth chasing.',
-  alternates: { canonical: '/backlinks' },
-};
+  path: '/backlinks',
+});
 
 const STATUS_COLOR: Record<string, string> = {
   active: 'rgb(var(--accent))',

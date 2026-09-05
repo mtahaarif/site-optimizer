@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { loadReport, crawlHistory, previousCrawlId } from '@/src/crawler/store.ts';
 import type { AuditReport } from '@/src/crawler/audit.ts';
 import { Compare, type IssueRef } from './compare.tsx';
+import { pageMeta } from '../../../meta.ts';
 
 export const instant = false;
 
@@ -11,11 +12,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const report = await loadReport(id);
   const raw = report ? report.origin.replace(/^https?:\/\//, '') : 'site';
   const host = raw.length > 25 ? raw.slice(0, 25) + '…' : raw; // keep the title under 60 chars
-  return {
+  return pageMeta({
     title: `Compare audits · ${host}`,
     description: `How ${host} has changed between audits: score, page count and issue trends, plus which checks were fixed and which appeared since the previous crawl.`,
-    alternates: { canonical: `/crawl/${id}/compare` },
-  };
+    path: `/crawl/${id}/compare`,
+  });
 }
 
 const failing = (r: AuditReport): IssueRef[] =>

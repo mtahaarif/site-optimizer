@@ -3,13 +3,14 @@ import Link from 'next/link';
 import { listProjects } from '@/src/crawler/store.ts';
 import { scoreBand } from '../ui.tsx';
 import { AddProject } from './add-project.tsx';
+import { pageMeta } from '../meta.ts';
 
 export const instant = false;
-export const metadata = {
+export const metadata = pageMeta({
   title: 'Your website projects',
   description: 'Every website you audit, as one project — with its latest health score and trend across all crawls.',
-  alternates: { canonical: '/projects' },
-};
+  path: '/projects',
+});
 
 const fmtAgo = (ts: number): string => {
   const m = Math.round((Date.now() - ts) / 60_000);

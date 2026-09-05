@@ -4,15 +4,16 @@ import { configuredProviders } from '@/src/ranks/providers.ts';
 import { Stat, Bar } from '../ui.tsx';
 import { RankCheckForm } from './check-form.tsx';
 import { RefreshTracked } from './refresh-tracked.tsx';
+import { pageMeta } from '../meta.ts';
 
-// Reads live data from SQLite, so there is no static shell to prerender.
+// Reads live data from Postgres, so there is no static shell to prerender.
 export const instant = false;
 
-export const metadata = {
+export const metadata = pageMeta({
   title: 'Track your search rankings',
   description: 'See where your website shows up in search for any phrase, in any city, on computer or phone — and watch how your position changes over time.',
-  alternates: { canonical: '/ranks' },
-};
+  path: '/ranks',
+});
 
 const ENGINE_LABEL: Record<string, string> = {
   google: 'Google', bing: 'Bing', yahoo: 'Yahoo', yandex: 'Yandex',

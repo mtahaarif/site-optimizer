@@ -1,5 +1,6 @@
 import { loadReport, getJob } from '@/src/crawler/store.ts';
 import { CrawlView } from './view.tsx';
+import { pageMeta } from '../../meta.ts';
 
 // Reads live data from Postgres, so there is no static shell to prerender.
 export const instant = false;
@@ -16,11 +17,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const host = raw.length > 25 ? raw.slice(0, 25) + '…' : raw; // keep the title under 60 chars
   // Include a short crawl id so each report's title is unique (two crawls of the
   // same site would otherwise share a title). Indexable with a self-canonical.
-  return {
+  return pageMeta({
     title: `${host} audit · ${id.slice(0, 6)}`,
     description: `Technical health ${Math.round(report.score)}/100 for ${host} — ${report.counts?.checksFailed ?? 0} issues found across ${report.counts?.crawled ?? 0} pages.`,
-    alternates: { canonical: `/crawl/${id}` },
-  };
+    path: `/crawl/${id}`,
+  });
 }
 
 export default async function CrawlPage({ params }: { params: Promise<{ id: string }> }) {

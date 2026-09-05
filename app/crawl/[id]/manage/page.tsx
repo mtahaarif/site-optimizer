@@ -2,6 +2,7 @@ import { connection } from 'next/server';
 import Link from 'next/link';
 import { loadReport } from '@/src/crawler/store.ts';
 import { Manage } from './manage.tsx';
+import { pageMeta } from '../../../meta.ts';
 
 export const instant = false;
 
@@ -10,11 +11,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const report = await loadReport(id);
   const raw = report ? report.origin.replace(/^https?:\/\//, '') : 'site';
   const host = raw.length > 25 ? raw.slice(0, 25) + '…' : raw; // keep the title under 60 chars
-  return {
+  return pageMeta({
     title: `Robots & sitemap · ${host}`,
     description: `Review and clean up the robots file and XML sitemaps for ${host} — problems are detected and a corrected file is generated for you to copy.`,
-    alternates: { canonical: `/crawl/${id}/manage` },
-  };
+    path: `/crawl/${id}/manage`,
+  });
 }
 
 async function fetchRobots(origin: string): Promise<{ text: string | null; error: string | null }> {

@@ -3,15 +3,16 @@ import { dbStats } from '@/src/db/index.ts';
 import { alertChannelsConfigured } from '@/src/alerts/send.ts';
 import { configuredProviders } from '@/src/ranks/providers.ts';
 import { gscConfigured } from '@/src/backlinks/gsc.ts';
+import { pageMeta } from '../meta.ts';
 
 // Reads live data from Postgres, so there is no static shell to prerender.
 export const instant = false;
 
-export const metadata = {
+export const metadata = pageMeta({
   title: 'Scheduling, alerts & integrations',
   description: 'Set up automatic re-crawls and alerts, connect Search Console and Analytics, and see what is configured — run from a laptop or free on a schedule.',
-  alternates: { canonical: '/schedule' },
-};
+  path: '/schedule',
+});
 
 const fmtBytes = (n: number) =>
   n >= 1024 * 1024 ? (n / 1024 / 1024).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB';

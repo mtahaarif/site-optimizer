@@ -101,7 +101,7 @@ export function Sidebar() {
 
       <div className="hidden border-t border-line px-4 py-3 lg:block">
         <p className="font-mono text-[9px] uppercase leading-relaxed tracking-[0.12em] text-muted">
-          Local-first · SQLite
+          Next.js · Postgres
         </p>
       </div>
     </aside>

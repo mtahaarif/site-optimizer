@@ -5,13 +5,14 @@ import { gradesForCrawl, llmConfigured, activeProvider } from '@/src/core/conten
 import { ScoreDial } from '../ui.tsx';
 import { Section, MeterBar, SitePicker } from '../panel.tsx';
 import { ContentGrader, type PageRow, type GradeRow } from './grader.tsx';
+import { pageMeta } from '../meta.ts';
 
 export const instant = false;
-export const metadata = {
+export const metadata = pageMeta({
   title: 'Content quality',
   description: 'An AI editor reads your pages and scores them on depth, originality and expertise — the things search engines actually reward.',
-  alternates: { canonical: '/content' },
-};
+  path: '/content',
+});
 
 export default async function ContentPage({
   searchParams,
