@@ -204,15 +204,30 @@ export function issuesByPage(outcomes: CheckOutcome[]): Map<string, CheckOutcome
   return map;
 }
 
+/**
+ * A category rollup.
+ *
+ * The three lists hold check **ids**, not the outcome objects themselves.
+ * Every outcome belongs to exactly one category, so embedding them here meant
+ * the whole set was serialised twice — once in `AuditReport.outcomes` and
+ * again in full under `categories`. On a real report that was ~160 KB of
+ * duplication, most of an inline RSC payload. Callers resolve ids against
+ * `outcomes` with `byId()` below.
+ */
 export interface CategorySummary {
   category: Category;
   label: string;
   description: string;
-  failed: CheckOutcome[];
-  passed: CheckOutcome[];
-  skipped: CheckOutcome[];
+  failed: string[];
+  passed: string[];
+  skipped: string[];
   /** share of crawled pages touched by any failing check in this category */
   affectedPageShare: number;
+}
+
+/** Index outcomes by check id, for resolving the id lists on CategorySummary. */
+export function byId(outcomes: CheckOutcome[]): Map<string, CheckOutcome> {
+  return new Map(outcomes.map((o) => [o.id, o]));
 }
 
 /**
@@ -250,9 +265,10 @@ export function summarizeByCategory(
       category,
       label: CATEGORY_LABELS[category],
       description: CATEGORY_DESCRIPTIONS[category],
-      failed,
-      passed: mine.filter((o) => o.status === 'passed'),
-      skipped: mine.filter((o) => o.status === 'skipped'),
+      // Ids only — the outcomes themselves live once, in AuditReport.outcomes.
+      failed: failed.map((o) => o.id),
+      passed: mine.filter((o) => o.status === 'passed').map((o) => o.id),
+      skipped: mine.filter((o) => o.status === 'skipped').map((o) => o.id),
       affectedPageShare: pageCount > 0 ? touched.size / pageCount : 0,
     };
   }).filter((c) => c.failed.length + c.passed.length + c.skipped.length > 0);

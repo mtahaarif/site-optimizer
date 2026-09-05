@@ -308,6 +308,22 @@ function AllChecks({ report }: { report: AuditReport }) {
     return o.status === 'failed' && o.severity === filter;
   };
 
+  // `categories` carries check ids; the outcomes themselves live once, in
+  // report.outcomes. Reports stored before that change embedded the whole
+  // objects, so accept either shape rather than break older reports.
+  //
+  // Indexed here rather than imported from the registry: this is a client
+  // component, and the registry pulls in every check module — and with them
+  // node:fs and the database driver — which cannot be bundled for the browser.
+  const index = useMemo(
+    () => new Map(report.outcomes.map((o) => [o.id, o])),
+    [report.outcomes],
+  );
+  const resolve = (list: Array<string | CheckOutcome>): CheckOutcome[] =>
+    list
+      .map((v) => (typeof v === 'string' ? index.get(v) : v))
+      .filter((o): o is CheckOutcome => !!o);
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-2">
@@ -334,9 +350,9 @@ function AllChecks({ report }: { report: AuditReport }) {
       </div>
 
       {report.categories.map((cat) => {
-        const failed = cat.failed.filter(matches);
-        const passed = cat.passed.filter(matches);
-        const skipped = cat.skipped.filter(matches);
+        const failed = resolve(cat.failed).filter(matches);
+        const passed = resolve(cat.passed).filter(matches);
+        const skipped = resolve(cat.skipped).filter(matches);
         if (failed.length + passed.length + skipped.length === 0) return null;
 
         return (

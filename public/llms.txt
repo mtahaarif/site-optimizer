@@ -1,0 +1,34 @@
+# SiteChecker
+
+> A technical SEO platform for Next.js sites: 332 crawl checks against a published scoring rubric, content quality graded by a language model, answer-engine readiness, rank tracking across four search engines, uptime monitoring and backlink verification.
+
+SiteChecker audits a website and reports every check it ran — the ones that
+passed as well as the ones that failed — scored against a fixed, versioned
+rubric rather than a formula derived from the site's own defects. The headline
+number is deliberately called Technical health, not an SEO score: it measures
+how well a site is built and how cleanly it can be crawled and indexed, which
+is a different question from where it will rank.
+
+Two things it measures that general-purpose crawlers do not: whether AI answer
+engines can reach and read each page (most do not execute JavaScript, so a page
+assembled in the browser is invisible to them), and whether the writing on a
+page is good enough to be worth citing, judged by a model rather than inferred
+from word count.
+
+## Pages
+
+- [Dashboard](https://site-optimizer.vercel.app/): Latest audit score, most important pages, rankings, AI visibility and backlinks on one screen.
+- [Projects](https://site-optimizer.vercel.app/projects): Every audited website as a project, with its health score and trend across all crawls.
+- [Search & traffic insights](https://site-optimizer.vercel.app/insights): Search Console and GA4 side by side — top queries, top pages, visits and engagement.
+- [AI visibility](https://site-optimizer.vercel.app/ai-visibility): Whether ChatGPT, Claude, Perplexity and Google's AI answers can reach, read and quote the site, with the fixes in priority order.
+- [Content quality](https://site-optimizer.vercel.app/content): A language model reads each page and scores depth, originality, expertise and intent match, with specific fixes.
+- [Rankings](https://site-optimizer.vercel.app/ranks): Search position for any phrase on Google, Bing, Yahoo and Yandex, by device and city, including the Google local map pack.
+- [Backlinks](https://site-optimizer.vercel.app/backlinks): Which links pointing at the site are still live, still dofollow, and which have disappeared.
+- [Scheduling & integrations](https://site-optimizer.vercel.app/schedule): Automatic re-crawls, alert channels, and the setup status of every integration.
+
+## Notes
+
+- Per-audit pages under /crawl/ and /project/ hold one user's report data. They
+  are intentionally not listed here: they are unbounded, they change as audits
+  are re-run, and their URLs stop resolving when a project is deleted.
+- /api/ is disallowed in robots.txt and returns JSON, not documents.

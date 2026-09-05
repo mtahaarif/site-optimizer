@@ -27,8 +27,17 @@ export function LlmsFile({ content }: { content: string }) {
           className="border border-line px-4 py-1.5 text-[12.5px] text-muted transition-colors hover:border-ink hover:text-ink">
           Download
         </button>
-        <span className="text-[12px] text-muted">Save it at the root of your site, as <span className="font-mono text-ink">/llms.txt</span></span>
       </div>
+      {/* Names the directory, not just the URL. "The root of your site" reads as
+          the project root, where the file is not served by any framework — the
+          most common way this ends up returning 404 after being generated. */}
+      <p className="mt-2 text-[12px] leading-relaxed text-muted">
+        It has to be served at <span className="font-mono text-ink">/llms.txt</span>. On Next.js
+        that means saving it as <span className="font-mono text-ink">public/llms.txt</span> —
+        a file in the project root is not served. On Astro or Vite use{' '}
+        <span className="font-mono text-ink">public/</span> too; on a plain static host, the
+        directory you deploy.
+      </p>
       <pre className="scroll-x mt-3 max-h-[320px] overflow-y-auto border border-line bg-ground p-3 font-mono text-[11.5px] leading-relaxed text-ink">
 {content}
       </pre>

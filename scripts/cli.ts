@@ -3,7 +3,7 @@
  *   node scripts/cli.ts https://example.com [maxPages]
  */
 import { runAudit } from '../src/crawler/audit.ts';
-import { checkStats } from '../src/core/checks/registry.ts';
+import { checkStats, byId } from '../src/core/checks/registry.ts';
 
 const argv = process.argv.slice(2);
 const flags = new Set(argv.filter((a) => a.startsWith('--')));
@@ -63,11 +63,15 @@ if (report.render.enabled) {
 }
 
 console.log('\n--- FAILED CHECKS BY CATEGORY ---');
+// categories carry check ids; the outcomes live once, in report.outcomes.
+const outcomeById = byId(report.outcomes);
 for (const cat of report.categories) {
   if (cat.failed.length === 0) continue;
   console.log('\n' + cat.label.toUpperCase() + '  (' + cat.failed.length + ' issues, ' +
     cat.passed.length + ' passed, ' + Math.round(cat.affectedPageShare * 100) + '% of pages affected)');
-  for (const f of cat.failed.slice(0, 8)) {
+  for (const id of cat.failed.slice(0, 8)) {
+    const f = outcomeById.get(id);
+    if (!f) continue;
     console.log('   [' + f.severity.padEnd(11) + '] ' + f.title + ' : ' + f.affectedCount + ' page(s)');
     if (f.affected[0]?.detail) console.log('        e.g. ' + f.affected[0].detail);
   }
