@@ -88,6 +88,21 @@ export interface AuditReport {
 
   severity: Record<Severity, number>;
 
+  /**
+   * What the site is built with, and how many checks that let us skip. The
+   * count is reported so a lower "checks run" total on a WordPress site reads
+   * as deliberate rather than as the audit having done less work.
+   */
+  platform: {
+    id: string;
+    label: string;
+    kind: string;
+    confidence: number;
+    evidence: string[];
+    matches: Array<{ id: string; label: string; kind: string; confidence: number }>;
+    checksSkipped: number;
+  };
+
   isNext: boolean;
   nextSummary: {
     router: string;
@@ -362,6 +377,19 @@ export async function runAudit(
     },
 
     severity,
+    platform: {
+      id: site.platform.id,
+      label: site.platform.label,
+      kind: site.platform.kind,
+      confidence: site.platform.confidence,
+      evidence: site.platform.evidence,
+      matches: site.platform.matches.map((m) => ({
+        id: m.id, label: m.label, kind: m.kind, confidence: m.confidence,
+      })),
+      checksSkipped: outcomes.filter((o) =>
+        o.status === 'skipped'
+        && (o.skipReason?.startsWith('Does not apply to') || o.skipReason?.startsWith('Not reported on'))).length,
+    },
     isNext,
     nextSummary: isNext ? { router: dominantRouter, buildIds: [...new Set(nextPages.map((p) => p.next.buildId).filter((b): b is string => !!b))], strategies } : null,
 

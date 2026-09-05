@@ -8,6 +8,8 @@
  */
 import * as cheerio from 'cheerio';
 import { fingerprintNext } from './nextjs/detect.ts';
+import { detectPlatform } from './platform/detect.ts';
+import type { PlatformFingerprint } from './platform/types.ts';
 import type { NextFingerprint } from './nextjs/types.ts';
 
 export interface RedirectHop {
@@ -179,6 +181,8 @@ export interface PageData {
 
   // ---- framework ----------------------------------------------------------
   next: NextFingerprint;
+  /** what the site is built with — gates checks that cannot apply. */
+  platform: PlatformFingerprint;
 
   // ---- JavaScript rendering ------------------------------------------------
   /** true when this record was built from the post-hydration DOM */
@@ -557,6 +561,9 @@ export function extractPage(input: ExtractInput): PageData {
 
   const textLength = bodyText.length;
 
+  // Fingerprint once: the platform detector defers to it for Next.js.
+  const nextFingerprint = fingerprintNext({ url: finalUrl, status, headers, html });
+
   return {
     url,
     finalUrl,
@@ -642,7 +649,8 @@ export function extractPage(input: ExtractInput): PageData {
     structuredDataFormats,
     emptySrcCount: $('[src=""]').length,
 
-    next: fingerprintNext({ url: finalUrl, status, headers, html }),
+    next: nextFingerprint,
+    platform: detectPlatform({ url: finalUrl, status, headers, html, isNext: nextFingerprint.isNext }),
 
     renderedWithJs: input.renderedWithJs ?? false,
     jsConsoleErrors: input.jsConsoleErrors ?? [],
@@ -656,6 +664,8 @@ export function extractPage(input: ExtractInput): PageData {
 
 /** Minimal record for non-HTML or failed fetches. */
 function emptyPage(i: ExtractInput, contentType: string, bytes: number, isHtml: boolean): PageData {
+  const stubNext = fingerprintNext({ url: i.finalUrl, status: i.status, headers: i.headers, html: i.html });
+
   return {
     url: i.url, finalUrl: i.finalUrl, status: i.status, headers: i.headers,
     redirectChain: i.redirectChain, ttfbMs: i.ttfbMs, totalMs: i.totalMs, bytes,
@@ -679,7 +689,8 @@ function emptyPage(i: ExtractInput, contentType: string, bytes: number, isHtml: 
     domNodes: 0, domDepth: 0, domMaxWidth: 0, styleAttrCount: 0, duplicateIds: [],
     tables: [], forms: [], gtmCodes: [], gtmInBody: false, mapTagCount: 0,
     legacyPluginCount: 0, structuredDataFormats: [], emptySrcCount: 0,
-    next: fingerprintNext({ url: i.finalUrl, status: i.status, headers: i.headers, html: i.html }),
+    next: stubNext,
+    platform: detectPlatform({ url: i.finalUrl, status: i.status, headers: i.headers, html: i.html, isNext: stubNext.isNext }),
     renderedWithJs: i.renderedWithJs ?? false,
     jsConsoleErrors: i.jsConsoleErrors ?? [],
     domContentLoadedMs: i.domContentLoadedMs ?? 0,

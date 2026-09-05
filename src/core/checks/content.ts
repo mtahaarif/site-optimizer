@@ -254,6 +254,9 @@ const bodyChecks: PageCheck[] = [
     category: 'content-relevance', severity: 'warning',
     why: 'A default "Admin" byline undermines the author signals that support E-E-A-T assessment.',
     fix: 'Set a real author name and profile.',
+    // "Admin" as a byline is a CMS default. Elsewhere the phrase "by admin"
+    // is ordinary prose — documentation and support pages say it constantly.
+    onlyOn: ['cms'],
     test: (p) => p.hasAdminAuthor,
   }),
   pageCheck({

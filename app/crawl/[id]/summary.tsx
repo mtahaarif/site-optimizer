@@ -51,11 +51,18 @@ export function Summary({ report, embedded = false }: { report: AuditReport; emb
           <h1 className="text-[28px] font-bold tracking-tight">
             Audit of {report.origin.replace(/^https?:\/\//, '')} · {new Date(report.createdAt).toLocaleString()}
           </h1>
-          {report.isNext && (
+          {report.isNext ? (
             <span className="rounded border border-accent px-2 py-px font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-accent">
               Next.js · {report.nextSummary?.router}
             </span>
-          )}
+          ) : report.platform && report.platform.id !== 'unknown' ? (
+            <span
+              className="rounded border border-accent px-2 py-px font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-accent"
+              title={report.platform.evidence.join(' · ')}
+            >
+              {report.platform.label}
+            </span>
+          ) : null}
           {report.render?.enabled && (
             <span
               className="rounded border border-line px-2 py-px font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-muted"
@@ -143,10 +150,75 @@ export function Summary({ report, embedded = false }: { report: AuditReport; emb
 
 // ---------------------------------------------------------------------------
 
+/**
+ * What the site is built with, and what that let the audit skip.
+ *
+ * The skipped count is shown deliberately: a WordPress site running fewer
+ * checks than a Next.js one should read as the audit declining to report
+ * things that cannot apply, not as it having done less work.
+ */
+function PlatformCard({ report }: { report: AuditReport }) {
+  const platform = report.platform;
+  if (!platform) return null;
+
+  const detected = platform.id !== 'unknown';
+  const secondary = platform.matches.filter((m) => m.id !== platform.id);
+
+  return (
+    <section className="border border-line bg-surface p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h3 className="font-mono text-[10.5px] font-bold uppercase tracking-[0.18em] text-muted">
+          Built with
+        </h3>
+        {platform.checksSkipped > 0 && (
+          <span className="font-mono text-[10.5px] text-muted">
+            {platform.checksSkipped} check{platform.checksSkipped === 1 ? '' : 's'} skipped as not applicable
+          </span>
+        )}
+      </div>
+
+      {detected ? (
+        <>
+          <div className="mt-3 flex flex-wrap items-baseline gap-2">
+            <span className="text-[18px] font-bold tracking-tight text-ink">{platform.label}</span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+              {platform.kind.replace('-', ' ')}
+            </span>
+            <span className="font-mono text-[11px] text-muted">
+              · {Math.round(platform.confidence * 100)}% confidence
+            </span>
+          </div>
+
+          {platform.evidence.length > 0 && (
+            <ul className="mt-3 flex flex-col gap-1">
+              {platform.evidence.map((e) => (
+                <li key={e} className="text-[12.5px] leading-relaxed text-muted">— {e}</li>
+              ))}
+            </ul>
+          )}
+
+          {secondary.length > 0 && (
+            <p className="mt-3 font-mono text-[11px] text-muted">
+              Also detected: {secondary.map((m) => m.label).join(', ')}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="mt-3 max-w-[76ch] text-[13px] leading-relaxed text-muted">
+          No platform signature was recognised, so every check ran. Nothing was skipped —
+          an unidentified site is audited in full rather than on a guess.
+        </p>
+      )}
+    </section>
+  );
+}
+
 function Overview({ report }: { report: AuditReport }) {
   return (
     <div className="flex flex-col gap-8">
       <PillarCard report={report} />
+
+      <PlatformCard report={report} />
 
       <TrafficCard report={report} />
 

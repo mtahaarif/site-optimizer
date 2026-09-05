@@ -9,6 +9,7 @@
 import type {
   Check, PageCheck, SiteCheck, CheckOutcome, AffectedPage, Category, SiteData,
 } from './types.ts';
+import type { PlatformFingerprint } from '../platform/types.ts';
 import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, isIndexableHtml } from './types.ts';
 import { normalizeUrl } from '../extract.ts';
 
@@ -85,6 +86,36 @@ export interface RunOptions {
   ignored?: Set<string>;
 }
 
+// ---------------------------------------------------------------------------
+// Platform gating
+// ---------------------------------------------------------------------------
+
+/**
+ * Should this check be skipped for what the site is built with?
+ *
+ * Returns the reason to show, or null to run it. A check is only skipped when
+ * the platform is actually known: an unrecognised site runs everything, on the
+ * principle that a missed finding is worse than a noisy one, and that silently
+ * skipping checks on a guess would make the score incomparable between sites.
+ */
+export function platformSkipReason(check: Check, platform: PlatformFingerprint): string | null {
+  if (platform.id === 'unknown' || platform.confidence < 0.5) return null;
+
+  // The whole detected stack, not just the winner: WooCommerce runs on
+  // WordPress, so a WordPress-gated check must still run on a WooCommerce site.
+  const present = new Set<string>([platform.id, platform.kind]);
+  for (const m of platform.matches) { present.add(m.id); present.add(m.kind); }
+  if (platform.runsPhp) present.add('php');
+
+  if (check.onlyOn && !check.onlyOn.some((p) => present.has(p))) {
+    return `Does not apply to ${platform.label} sites`;
+  }
+  if (check.notOn && check.notOn.some((p) => present.has(p))) {
+    return `Not reported on ${platform.label}, where this is normal`;
+  }
+  return null;
+}
+
 /**
  * Evaluate every check against the crawl.
  *
@@ -117,6 +148,11 @@ export function runAllChecks(site: SiteData, opts: RunOptions = {}): CheckOutcom
     }
     if (check.requiresNext && !site.pages.some((p) => p.next.isNext)) {
       outcomes.push({ ...base, status: 'skipped', skipReason: 'Not a Next.js site', affected: [], affectedCount: 0, applicableCount: 0 });
+      continue;
+    }
+    const platformSkip = platformSkipReason(check, site.platform);
+    if (platformSkip) {
+      outcomes.push({ ...base, status: 'skipped', skipReason: platformSkip, affected: [], affectedCount: 0, applicableCount: 0 });
       continue;
     }
 

@@ -3,6 +3,7 @@ import type { CoreWebVitalsData } from '../pagespeed/types.ts';
 import type { GscData } from '../gsc/client.ts';
 import type { Ga4Data } from '../ga4/client.ts';
 import type { Severity } from '../scoring/model.ts';
+import type { PlatformSelector, PlatformFingerprint } from '../platform/types.ts';
 
 export type { Severity };
 
@@ -136,6 +137,12 @@ export interface SiteData {
   duplicateDescriptions: Map<string, string[]>;
   duplicateContent: Map<string, string[]>;
 
+  /**
+   * What the site is built with, aggregated across crawled pages. Gates the
+   * checks that cannot apply to it — see platformSkipReason in registry.ts.
+   */
+  platform: PlatformFingerprint;
+
   ssl: SslInfo;
   security: SecurityHeaders;
   httpsRedirectWorks: boolean;
@@ -192,6 +199,20 @@ export interface PageCheck {
   why: string;
   fix: string;
   requiresNext?: boolean;
+  /**
+   * Platform gating, so a check that cannot apply is skipped with a reason
+   * rather than passing vacuously or failing falsely.
+   *
+   *   onlyOn  the check is meaningless anywhere else — a PHP fatal error on a
+   *           static site, a WordPress author convention on Shopify.
+   *   notOn   the pattern is real but is how that platform normally works, so
+   *           reporting it is noise — inline styles on a drag-and-drop builder.
+   *
+   * Both accept platform ids and platform kinds, so a rule can target a family
+   * ("site-builder") and stay correct as platforms are added.
+   */
+  onlyOn?: PlatformSelector[];
+  notOn?: PlatformSelector[];
   /** gates the check on data we may not have, e.g. Search Console */
   requires?: 'search-console';
   /**
@@ -211,6 +232,20 @@ export interface SiteCheck {
   why: string;
   fix: string;
   requiresNext?: boolean;
+  /**
+   * Platform gating, so a check that cannot apply is skipped with a reason
+   * rather than passing vacuously or failing falsely.
+   *
+   *   onlyOn  the check is meaningless anywhere else — a PHP fatal error on a
+   *           static site, a WordPress author convention on Shopify.
+   *   notOn   the pattern is real but is how that platform normally works, so
+   *           reporting it is noise — inline styles on a drag-and-drop builder.
+   *
+   * Both accept platform ids and platform kinds, so a rule can target a family
+   * ("site-builder") and stay correct as platforms are added.
+   */
+  onlyOn?: PlatformSelector[];
+  notOn?: PlatformSelector[];
   requires?: 'search-console';
   test: (site: SiteData) => CheckVerdict;
 }

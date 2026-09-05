@@ -12,6 +12,7 @@ import type { SiteData, InboundLink, SslInfo, SecurityHeaders } from '../core/ch
 import { fetchRobots, USER_AGENT } from './robots.ts';
 import { discoverSitemaps } from './sitemap.ts';
 import { BrowserPool, detectSpaShell } from './browser.ts';
+import { aggregatePlatform } from '../core/platform/detect.ts';
 import { extractBodyText } from '../core/nextjs/detect.ts';
 
 export interface CrawlOptions {
@@ -568,6 +569,10 @@ async function analyse(pages: PageData[], i: AnalyseInput): Promise<SiteData> {
     notFoundStatus,
     homepageIndexable,
     faviconFound,
+    // One verdict for the site from the per-page fingerprints: pages can
+    // legitimately differ (a WordPress blog in front of an app), so the
+    // platform seen on the most pages wins.
+    platform: aggregatePlatform(pages.filter((p) => p.isHtml).map((p) => p.platform)),
     hasSearchConsole: false,
     gsc: null,
     ga4: null,

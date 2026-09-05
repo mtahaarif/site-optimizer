@@ -90,6 +90,20 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <p className="mt-1 font-mono text-[11.5px] text-muted">
             {history.length} {history.length === 1 ? 'audit' : 'audits'}
             {history.length > 0 && <> · since {new Date(history[0]!.created_at).toLocaleDateString()}</>}
+            {/* From the latest audit: what this site is built with decides
+                which checks apply to it at all. */}
+            {latestReport?.platform && latestReport.platform.id !== 'unknown' && (
+              <>
+                {' '}· built with{' '}
+                <span className="text-ink" title={latestReport.platform.evidence.join(' · ')}>
+                  {latestReport.platform.label}
+                </span>
+                {latestReport.platform.checksSkipped > 0 && (
+                  <> · {latestReport.platform.checksSkipped} check
+                    {latestReport.platform.checksSkipped === 1 ? '' : 's'} not applicable</>
+                )}
+              </>
+            )}
           </p>
         </div>
         <DeleteProject siteId={siteId} origin={host} />

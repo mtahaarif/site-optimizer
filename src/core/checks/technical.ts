@@ -260,6 +260,10 @@ const codeChecks: PageCheck[] = [
     category: 'code-validation', severity: 'blocker',
     why: 'A visible PHP error means the page failed to execute and is leaking file paths and stack details to visitors and attackers.',
     fix: 'Fix the error and disable error display in production.',
+    // A site that does not run PHP cannot emit one, so any match is prose
+    // about PHP rather than a broken page — and this is a blocker, the most
+    // expensive thing in the rubric to get wrong.
+    onlyOn: ['php'],
     test: (p) => p.hasPhpError,
   }),
   pageCheck({
@@ -323,6 +327,10 @@ const codeChecks: PageCheck[] = [
     category: 'code-validation', severity: 'notice',
     why: 'Inline styles cannot be cached or reused, add weight to every response, and require unsafe-inline in a Content-Security-Policy.',
     fix: 'Move styling into stylesheets or utility classes.',
+    // Drag-and-drop builders position everything with inline styles — it is
+    // how their output works, not a defect, and the user cannot change it
+    // without leaving the platform. Reporting it on every page is noise.
+    notOn: ['site-builder'],
     test: (p) => p.styleAttrCount > 0 ? p.styleAttrCount + ' inline style attribute(s)' : false,
   }),
 ];
