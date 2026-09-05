@@ -8,6 +8,7 @@
  */
 import { createServer } from 'node:http';
 import { runAudit } from '../src/crawler/audit.ts';
+import { closePool } from '../src/db/index.ts';
 import type { CheckOutcome } from '../src/core/checks/types.ts';
 
 // ---- a tiny two-page site to crawl ---------------------------------------
@@ -169,5 +170,6 @@ async function run(label: string, payload: unknown, maxPagespeedPages = 3) {
 
 globalThis.fetch = realFetch;
 server.close();
+await closePool();
 console.log(failures === 0 ? '\nAll CWV pipeline assertions passed.\n' : `\n${failures} assertion(s) FAILED.\n`);
 process.exitCode = failures === 0 ? 0 : 1;

@@ -8,7 +8,7 @@
  * Exits non-zero when any site is down, so a scheduler that reports failures
  * (GitHub Actions, systemd) surfaces the outage even if email delivery fails.
  */
-import { closeDb, listSites } from '../src/db/index.ts';
+import { closePool, listSites } from '../src/db/index.ts';
 import { checkAllSites, addMonitoredSite, uptimeSummary, recentIncidents } from '../src/monitor/check.ts';
 import { alertChannelsConfigured } from '../src/alerts/send.ts';
 
@@ -20,15 +20,15 @@ async function main() {
   if (args[0] === '--add') {
     const url = args[1];
     if (!url) { console.error('usage: node scripts/monitor.ts --add <url> [label]'); process.exit(1); }
-    const site = addMonitoredSite(url, args[2]);
+    const site = await addMonitoredSite(url, args[2]);
     log(`Monitoring ${site.origin} (site #${site.id})`);
     return 0;
   }
 
   if (args[0] === '--status') {
     const day = Date.now() - 86_400_000;
-    for (const site of listSites()) {
-      const s = uptimeSummary(site.id, day);
+    for (const site of await listSites()) {
+      const s = await uptimeSummary(site.id, day);
       if (!s) continue;
       log(`${site.origin}`);
       log(`  24h uptime : ${s.uptimePct.toFixed(2)}%  (${s.checks} checks, ${s.failures} failures)`);
@@ -38,7 +38,7 @@ async function main() {
       if (s.openIncident) log(`  OPEN INCIDENT since ${new Date(s.openIncident.started_at).toISOString()}`);
       log();
     }
-    const incidents = recentIncidents(undefined, 5);
+    const incidents = await recentIncidents(undefined, 5);
     if (incidents.length) {
       log('Recent incidents:');
       for (const i of incidents) {
@@ -49,7 +49,7 @@ async function main() {
     return 0;
   }
 
-  const sites = listSites();
+  const sites = await listSites();
   if (sites.length === 0) {
     log('No sites registered. Add one:');
     log('  node scripts/monitor.ts --add https://example.com');
@@ -84,5 +84,5 @@ try {
   console.error('monitor failed:', (err as Error).message);
   process.exitCode = 2;
 } finally {
-  closeDb();
+  await closePool();
 }

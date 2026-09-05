@@ -176,8 +176,8 @@ const toStored = (r: GradeRow): StoredGrade => ({
   fixes: JSON.parse(r.fixes) as Grade['fixes'],
 });
 
-export function saveGrade(crawlId: string, url: string, grade: Grade, words: number, model: string): void {
-  run(
+export async function saveGrade(crawlId: string, url: string, grade: Grade, words: number, model: string): Promise<void> {
+  await run(
     `INSERT INTO content_grades
        (crawl_id, url, url_key, graded_at, model, overall, depth, relevance,
         readability, originality, trust, structure, verdict, strengths, fixes, intent, words)
@@ -196,17 +196,18 @@ export function saveGrade(crawlId: string, url: string, grade: Grade, words: num
   );
 }
 
-export function gradesForCrawl(crawlId: string): StoredGrade[] {
-  return all<GradeRow>(
+export async function gradesForCrawl(crawlId: string): Promise<StoredGrade[]> {
+  const rows = await all<GradeRow>(
     `SELECT url, graded_at, model, words, overall, depth, relevance, readability,
             originality, trust, structure, verdict, strengths, fixes, intent
      FROM content_grades WHERE crawl_id = ? ORDER BY overall ASC`,
     crawlId,
-  ).map(toStored);
+  );
+  return rows.map(toStored);
 }
 
-export function gradeFor(crawlId: string, url: string): StoredGrade | null {
-  const row = get<GradeRow>(
+export async function gradeFor(crawlId: string, url: string): Promise<StoredGrade | null> {
+  const row = await get<GradeRow>(
     `SELECT url, graded_at, model, words, overall, depth, relevance, readability,
             originality, trust, structure, verdict, strengths, fixes, intent
      FROM content_grades WHERE crawl_id = ? AND url_key = ?`,

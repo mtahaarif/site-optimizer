@@ -13,7 +13,7 @@ import { scoreSite, pageWeight, type PageInput } from '../src/core/scoring/model
 import { normalizePath, pathOfUrl, clearGa4Cache } from '../src/core/ga4/client.ts';
 import { clearCache as clearGscCache, cachedRanges } from '../src/core/gsc/client.ts';
 import { resetTokenCache } from '../src/core/gsc/auth.ts';
-import { closeDb, run } from '../src/db/index.ts';
+import { closePool, run } from '../src/db/index.ts';
 import type { CheckOutcome } from '../src/core/checks/types.ts';
 
 const PORT = 8799;
@@ -135,8 +135,8 @@ process.env['GOOGLE_SERVICE_ACCOUNT_JSON'] = JSON.stringify({
 process.env['GSC_SITE_URL'] = BASE + '/';
 process.env['GA4_PROPERTY_ID'] = '999888777';
 
-clearGscCache();
-clearGa4Cache();
+await clearGscCache();
+await clearGa4Cache();
 resetTokenCache();
 
 // ---------------------------------------------------------------------------
@@ -202,7 +202,7 @@ const callsAfterFirst = { gsc: gscCalls, ga4: ga4Calls };
 await runAudit({ startUrl: BASE + '/', maxPages: 8, checkAssets: false, maxPagespeedPages: 0 });
 check('GSC served from cache on re-audit', gscCalls, callsAfterFirst.gsc);
 check('GA4 served from cache on re-audit', ga4Calls, callsAfterFirst.ga4);
-check('cache row recorded', cachedRanges().length >= 1, true);
+check('cache row recorded', (await cachedRanges()).length >= 1, true);
 
 // ---------------------------------------------------------------------------
 console.log('\n--- scoring: traffic must change page weight ---');
@@ -248,10 +248,10 @@ console.log('\n--- graceful degradation ---');
 
 globalThis.fetch = realFetch;
 server.close();
-run("DELETE FROM sites WHERE origin LIKE '%127.0.0.1:8799%'");
-clearGscCache();
-clearGa4Cache();
-closeDb();
+await run("DELETE FROM sites WHERE origin LIKE '%127.0.0.1:8799%'");
+await clearGscCache();
+await clearGa4Cache();
+await closePool();
 
 console.log(failures === 0 ? '\nAll traffic-integration assertions passed.\n' : `\n${failures} assertion(s) FAILED.\n`);
 process.exitCode = failures === 0 ? 0 : 1;

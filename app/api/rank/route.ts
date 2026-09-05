@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const input = { keyword, domain, engines, device, country, city, scope } as const;
     const results = await checkRank(input);
     let tracked = 0;
-    if (track) tracked = saveTrackedCheck(input, results);
+    if (track) tracked = await saveTrackedCheck(input, results);
     return Response.json({ keyword, domain, device, scope, results, tracked });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500 });

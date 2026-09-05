@@ -35,10 +35,10 @@ export async function POST(req: Request) {
   // Sequential on purpose: it keeps spend predictable and avoids hammering the
   // rate limit when someone selects ten pages at once.
   for (const url of urls) {
-    if (!force && gradeFor(crawlId, url)) { results.push({ url, ok: true }); continue; }
+    if (!force && await gradeFor(crawlId, url)) { results.push({ url, ok: true }); continue; }
 
     const page = byUrl.get(url);
-    const snap = loadSnapshot(crawlId, url);
+    const snap = await loadSnapshot(crawlId, url);
     if (!snap) {
       results.push({ url, ok: false, error: 'No saved copy of this page — re-run the audit to store one.' });
       continue;
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     });
 
     if (outcome.ok) {
-      saveGrade(crawlId, url, outcome.grade, outcome.words, outcome.model);
+      await saveGrade(crawlId, url, outcome.grade, outcome.words, outcome.model);
       results.push({ url, ok: true });
     } else {
       results.push({ url, ok: false, error: outcome.error });

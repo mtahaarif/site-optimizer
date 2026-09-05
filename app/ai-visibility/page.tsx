@@ -32,7 +32,7 @@ export default async function AiVisibilityPage({
   await connection();
   const { site } = await searchParams;
 
-  const projects = listProjects().filter((p) => p.crawlCount > 0);
+  const projects = (await listProjects()).filter((p) => p.crawlCount > 0);
   if (projects.length === 0) {
     return (
       <div className="flex flex-col gap-6">
@@ -48,7 +48,7 @@ export default async function AiVisibilityPage({
   const selected = projects.find((p) => String(p.siteId) === site)
     ?? projects.slice().sort((a, b) => (b.latestAt ?? 0) - (a.latestAt ?? 0))[0]!;
 
-  const crawls = projectCrawls(selected.siteId);
+  const crawls = await projectCrawls(selected.siteId);
   const crawlId = crawls.length ? crawls[crawls.length - 1]!.id : null;
   const report = crawlId ? await loadReport(crawlId) : null;
   if (!report || !crawlId) {
@@ -64,7 +64,7 @@ export default async function AiVisibilityPage({
 
   // Content grades live on their own page, but they still feed the readiness
   // score — being reachable is worthless if nothing is worth quoting.
-  const stored = gradesForCrawl(crawlId);
+  const stored = await gradesForCrawl(crawlId);
   const aeo = analyzeAeo({
     report, robotsText, llmsTxt,
     grades: stored.map((g) => ({ url: g.url, overall: g.overall })),

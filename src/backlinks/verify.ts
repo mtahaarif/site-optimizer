@@ -48,10 +48,10 @@ const TIMEOUT_MS = 20_000;
 
 // ---------------------------------------------------------------------------
 
-export function addBacklink(
+export async function addBacklink(
   siteId: number, sourceUrl: string, targetUrl: string | null, via = 'manual',
-): void {
-  run(
+): Promise<void> {
+  await run(
     `INSERT INTO backlinks (site_id, source_url, target_url, first_seen, status, discovered_via)
      VALUES (?, ?, ?, ?, 'unverified', ?)
      ON CONFLICT(site_id, source_url, target_url) DO NOTHING`,
@@ -59,22 +59,22 @@ export function addBacklink(
   );
 }
 
-export function importGscLinks(siteId: number, links: GscLink[]): number {
+export async function importGscLinks(siteId: number, links: GscLink[]): Promise<number> {
   let added = 0;
   for (const l of links) {
-    const before = get<{ c: number }>(
+    const before = (await get<{ c: number }>(
       'SELECT COUNT(*) c FROM backlinks WHERE site_id = ? AND source_url = ?', siteId, l.sourceUrl,
-    )?.c ?? 0;
-    addBacklink(siteId, l.sourceUrl, l.targetUrl, 'gsc');
-    const after = get<{ c: number }>(
+    ))?.c ?? 0;
+    await addBacklink(siteId, l.sourceUrl, l.targetUrl, 'gsc');
+    const after = (await get<{ c: number }>(
       'SELECT COUNT(*) c FROM backlinks WHERE site_id = ? AND source_url = ?', siteId, l.sourceUrl,
-    )?.c ?? 0;
+    ))?.c ?? 0;
     if (after > before) added++;
   }
   return added;
 }
 
-export function listBacklinks(siteId?: number, status?: BacklinkStatus): Backlink[] {
+export async function listBacklinks(siteId?: number, status?: BacklinkStatus): Promise<Backlink[]> {
   const clauses: string[] = [];
   if (siteId) clauses.push('site_id = ' + Number(siteId));
   if (status) clauses.push(`status = '${status.replace(/'/g, '')}'`);
@@ -187,13 +187,13 @@ export async function verifyBacklink(link: Backlink, site: Site): Promise<Verify
     if (wasActive) transition = 'lost';
   }
 
-  run(
+  await run(
     `INSERT INTO backlink_checks (backlink_id, checked_at, http_status, found, rel, anchor, error)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     link.id, now, httpStatus, found ? 1 : 0, rel, anchor, error,
   );
 
-  run(
+  await run(
     `UPDATE backlinks
         SET status = ?, rel = ?, anchor = COALESCE(?, anchor),
             last_checked = ?, last_seen_alive = CASE WHEN ? = 1 THEN ? ELSE last_seen_alive END
@@ -244,7 +244,7 @@ export async function verifyAll(
   site: Site,
   limit = Number(process.env['BACKLINK_BATCH'] ?? 50),
 ): Promise<VerifyResult[]> {
-  const links = all<Backlink>(
+  const links = await all<Backlink>(
     `SELECT * FROM backlinks WHERE site_id = ?
      ORDER BY last_checked IS NOT NULL, last_checked ASC LIMIT ?`,
     site.id, limit,
@@ -269,18 +269,18 @@ export interface BacklinkSummary {
   referringDomains: number;
 }
 
-export function backlinkSummary(siteId: number): BacklinkSummary {
-  const row = get<Record<string, number>>(`
+export async function backlinkSummary(siteId: number): Promise<BacklinkSummary> {
+  const row = await get<Record<string, number>>(`
     SELECT COUNT(*) total,
-      SUM(status = 'active')     active,
-      SUM(status = 'lost')       lost,
-      SUM(status = 'broken')     broken,
-      SUM(status = 'unverified') unverified,
-      SUM(rel = 'dofollow' AND status = 'active') dofollow,
-      SUM(rel IN ('nofollow','ugc','sponsored') AND status = 'active') nofollow
+      SUM((status = 'active')::int)     active,
+      SUM((status = 'lost')::int)       lost,
+      SUM((status = 'broken')::int)     broken,
+      SUM((status = 'unverified')::int) unverified,
+      SUM((rel = 'dofollow' AND status = 'active')::int) dofollow,
+      SUM((rel IN ('nofollow','ugc','sponsored') AND status = 'active')::int) nofollow
     FROM backlinks WHERE site_id = ?`, siteId);
 
-  const domains = all<{ source_url: string }>(
+  const domains = await all<{ source_url: string }>(
     'SELECT DISTINCT source_url FROM backlinks WHERE site_id = ?', siteId,
   );
   const hosts = new Set<string>();
@@ -289,13 +289,13 @@ export function backlinkSummary(siteId: number): BacklinkSummary {
   }
 
   return {
-    total: row?.['total'] ?? 0,
-    active: row?.['active'] ?? 0,
-    lost: row?.['lost'] ?? 0,
-    broken: row?.['broken'] ?? 0,
-    unverified: row?.['unverified'] ?? 0,
-    dofollow: row?.['dofollow'] ?? 0,
-    nofollow: row?.['nofollow'] ?? 0,
+    total: Number(row?.['total'] ?? 0),
+    active: Number(row?.['active'] ?? 0),
+    lost: Number(row?.['lost'] ?? 0),
+    broken: Number(row?.['broken'] ?? 0),
+    unverified: Number(row?.['unverified'] ?? 0),
+    dofollow: Number(row?.['dofollow'] ?? 0),
+    nofollow: Number(row?.['nofollow'] ?? 0),
     referringDomains: hosts.size,
   };
 }

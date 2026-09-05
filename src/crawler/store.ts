@@ -1,22 +1,17 @@
 /**
  * Crawl report storage.
  *
- * Reports live in the same SQLite file as monitoring, ranks and backlinks, so
- * score history sits alongside uptime and rankings and the whole tool is one
- * portable file. The full AuditReport is kept as a JSON blob because it is read
- * whole and never queried field-by-field; the columns beside it exist so trends
- * can be charted without deserialising every report.
+ * Reports live in the same Postgres database as monitoring, ranks and
+ * backlinks, so score history sits alongside uptime and rankings. The full
+ * AuditReport is kept as a JSON blob because it is read whole and never
+ * queried field-by-field; the columns beside it exist so trends can be charted
+ * without deserialising every report.
  */
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import { gzipSync, gunzipSync } from 'node:zlib';
-import { all, get, run, upsertSite, db, type Site } from '../db/index.ts';
+import { all, get, run, upsertSite, type Site } from '../db/index.ts';
 import { normalizeUrl } from '../core/extract.ts';
 import type { AuditReport } from './audit.ts';
 import type { CrawlProgress } from './crawl.ts';
-
-/** Legacy location: reports written before crawls moved into SQLite. */
-const LEGACY_DIR = path.join(process.cwd(), '.data', 'crawls');
 
 export interface Job {
   id: string;
@@ -30,56 +25,62 @@ export interface Job {
 }
 
 /**
- * In-flight jobs only. Next.js dev runs one server process, so this is shared
- * across requests; anything finished is in SQLite and survives a restart.
+ * Job progress lives in Postgres, not in a process-local map: the request that
+ * starts a crawl and the request that polls its progress are not guaranteed to
+ * land on the same serverless instance, so "in memory" would mean "invisible
+ * to the poll" as often as not. `report` is never populated from here — once a
+ * job is done, `loadReport` reads the real row from `crawls`.
  */
-const globalStore = globalThis as unknown as { __sitecheckerJobs?: Map<string, Job> };
-const jobs: Map<string, Job> = globalStore.__sitecheckerJobs ??= new Map();
-
-export function createJob(id: string, startUrl: string): Job {
-  const job: Job = {
-    id,
-    startUrl,
-    status: 'queued',
-    progress: { phase: 'robots', crawled: 0, queued: 0, total: 0, currentUrl: null, message: 'Starting' },
-    error: null,
-    createdAt: new Date().toISOString(),
-    finishedAt: null,
-    report: null,
-  };
-  jobs.set(id, job);
-  return job;
+interface JobRow {
+  id: string; start_url: string; status: Job['status']; progress: string;
+  error: string | null; created_at: number; finished_at: number | null;
 }
 
-export function getJob(id: string): Job | undefined {
-  return jobs.get(id);
+const toJob = (r: JobRow): Job => ({
+  id: r.id, startUrl: r.start_url, status: r.status,
+  progress: JSON.parse(r.progress) as CrawlProgress, error: r.error,
+  createdAt: new Date(Number(r.created_at)).toISOString(),
+  finishedAt: r.finished_at ? new Date(Number(r.finished_at)).toISOString() : null,
+  report: null,
+});
+
+export async function createJob(id: string, startUrl: string): Promise<Job> {
+  const progress: CrawlProgress = { phase: 'robots', crawled: 0, queued: 0, total: 0, currentUrl: null, message: 'Starting' };
+  const now = Date.now();
+  await run(
+    `INSERT INTO crawl_jobs (id, start_url, status, progress, created_at)
+     VALUES (?, ?, 'queued', ?, ?)`,
+    id, startUrl, JSON.stringify(progress), now,
+  );
+  return { id, startUrl, status: 'queued', progress, error: null, createdAt: new Date(now).toISOString(), finishedAt: null, report: null };
 }
 
-export function updateProgress(id: string, progress: CrawlProgress): void {
-  const job = jobs.get(id);
-  if (!job) return;
-  job.progress = progress;
-  job.status = progress.phase === 'done' ? 'done' : 'running';
+export async function getJob(id: string): Promise<Job | undefined> {
+  const row = await get<JobRow>('SELECT * FROM crawl_jobs WHERE id = ?', id);
+  return row ? toJob(row) : undefined;
+}
+
+export async function updateProgress(id: string, progress: CrawlProgress): Promise<void> {
+  await run(
+    `UPDATE crawl_jobs SET status = ?, progress = ? WHERE id = ?`,
+    progress.phase === 'done' ? 'done' : 'running', JSON.stringify(progress), id,
+  );
 }
 
 export async function completeJob(id: string, report: AuditReport): Promise<void> {
-  const job = jobs.get(id);
-  if (job) {
-    job.status = 'done';
-    job.report = report;
-    job.finishedAt = new Date().toISOString();
-    job.progress = { ...job.progress, phase: 'done', message: 'Complete' };
-  }
-  saveReport(report);
+  const progress: CrawlProgress = { phase: 'done', crawled: report.counts.crawled, queued: 0, total: report.counts.crawled, currentUrl: null, message: 'Complete' };
+  await run(
+    `UPDATE crawl_jobs SET status = 'done', progress = ?, finished_at = ? WHERE id = ?`,
+    JSON.stringify(progress), Date.now(), id,
+  );
+  await saveReport(report);
 }
 
-export function failJob(id: string, error: string): void {
-  const job = jobs.get(id);
-  if (!job) return;
-  job.status = 'error';
-  job.error = error;
-  job.finishedAt = new Date().toISOString();
-  job.progress = { ...job.progress, phase: 'error', message: error };
+export async function failJob(id: string, error: string): Promise<void> {
+  await run(
+    `UPDATE crawl_jobs SET status = 'error', error = ?, finished_at = ? WHERE id = ?`,
+    error, Date.now(), id,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -102,25 +103,23 @@ const MAX_SNAPSHOT_BYTES = 4 * 1024 * 1024;
  * routinely compresses to 10-20% of its original size, so a 200-page crawl adds
  * a few megabytes rather than tens.
  */
-export function saveSnapshots(crawlId: string, snapshots: PageSnapshot[]): {
+export async function saveSnapshots(crawlId: string, snapshots: PageSnapshot[]): Promise<{
   saved: number; rawBytes: number; gzipBytes: number;
-} {
+}> {
   let saved = 0, rawBytes = 0, gzipBytes = 0;
-  const stmt = db().prepare(
-    `INSERT INTO page_snapshots
-       (crawl_id, url, url_key, gzipped, raw_bytes, gzip_bytes, rendered, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(crawl_id, url_key) DO NOTHING`,
-  );
-
   const now = Date.now();
+
   for (const snap of snapshots) {
     if (!snap.html) continue;
     const raw = Buffer.byteLength(snap.html, 'utf8');
     if (raw > MAX_SNAPSHOT_BYTES) continue;
     try {
       const gz = gzipSync(Buffer.from(snap.html, 'utf8'), { level: 6 });
-      stmt.run(
+      await run(
+        `INSERT INTO page_snapshots
+           (crawl_id, url, url_key, gzipped, raw_bytes, gzip_bytes, rendered, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(crawl_id, url_key) DO NOTHING`,
         crawlId, snap.url, normalizeUrl(snap.url), gz,
         raw, gz.length, snap.rendered ? 1 : 0, now,
       );
@@ -139,9 +138,9 @@ export interface StoredSnapshot {
 }
 
 /** Fetch and decompress one page's HTML. */
-export function loadSnapshot(crawlId: string, url: string): StoredSnapshot | null {
-  const row = get<{
-    url: string; gzipped: Uint8Array; raw_bytes: number; gzip_bytes: number; rendered: number;
+export async function loadSnapshot(crawlId: string, url: string): Promise<StoredSnapshot | null> {
+  const row = await get<{
+    url: string; gzipped: Buffer; raw_bytes: number; gzip_bytes: number; rendered: number;
   }>(
     'SELECT url, gzipped, raw_bytes, gzip_bytes, rendered FROM page_snapshots WHERE crawl_id = ? AND url_key = ?',
     crawlId, normalizeUrl(url),
@@ -160,24 +159,24 @@ export function loadSnapshot(crawlId: string, url: string): StoredSnapshot | nul
   }
 }
 
-export function snapshotStats(crawlId: string): { count: number; rawBytes: number; gzipBytes: number } {
-  const row = get<{ c: number; raw: number | null; gz: number | null }>(
+export async function snapshotStats(crawlId: string): Promise<{ count: number; rawBytes: number; gzipBytes: number }> {
+  const row = await get<{ c: number; raw: number | null; gz: number | null }>(
     'SELECT COUNT(*) c, SUM(raw_bytes) raw, SUM(gzip_bytes) gz FROM page_snapshots WHERE crawl_id = ?',
     crawlId,
   );
   return { count: row?.c ?? 0, rawBytes: row?.raw ?? 0, gzipBytes: row?.gz ?? 0 };
 }
 
-export function hasSnapshot(crawlId: string, url: string): boolean {
-  return !!get<{ id: number }>(
+export async function hasSnapshot(crawlId: string, url: string): Promise<boolean> {
+  return !!(await get<{ id: number }>(
     'SELECT id FROM page_snapshots WHERE crawl_id = ? AND url_key = ?',
     crawlId, normalizeUrl(url),
-  );
+  ));
 }
 
-export function saveReport(report: AuditReport): void {
-  const site = upsertSite(report.origin);
-  run(
+export async function saveReport(report: AuditReport): Promise<void> {
+  const site = await upsertSite(report.origin);
+  await run(
     `INSERT INTO crawls
        (id, site_id, created_at, duration_ms, score, rubric_version, pages,
         checks_failed, checks_passed, blockers, criticals, warnings, is_next, report_json)
@@ -193,21 +192,9 @@ export function saveReport(report: AuditReport): void {
 }
 
 export async function loadReport(id: string): Promise<AuditReport | null> {
-  const live = jobs.get(id)?.report;
-  if (live) return live;
-
-  const row = get<{ report_json: string }>('SELECT report_json FROM crawls WHERE id = ?', id);
-  if (row) return JSON.parse(row.report_json) as AuditReport;
-
-  // Fall back to a pre-SQLite report file, and migrate it on read.
-  try {
-    const raw = await fs.readFile(path.join(LEGACY_DIR, id + '.json'), 'utf8');
-    const report = JSON.parse(raw) as AuditReport;
-    saveReport(report);
-    return report;
-  } catch {
-    return null;
-  }
+  const row = await get<{ report_json: string }>('SELECT report_json FROM crawls WHERE id = ?', id);
+  if (!row) return null;
+  return JSON.parse(row.report_json) as AuditReport;
 }
 
 export interface ReportIndexEntry {
@@ -222,9 +209,7 @@ export interface ReportIndexEntry {
 }
 
 export async function listReports(): Promise<ReportIndexEntry[]> {
-  await migrateLegacyReports();
-
-  const rows = all<{
+  const rows = await all<{
     id: string; origin: string; created_at: number; score: number;
     pages: number; checks_failed: number; is_next: number;
   }>(`SELECT c.id, s.origin, c.created_at, c.score, c.pages, c.checks_failed, c.is_next
@@ -235,7 +220,7 @@ export async function listReports(): Promise<ReportIndexEntry[]> {
     id: r.id,
     origin: r.origin,
     startUrl: r.origin,
-    createdAt: new Date(r.created_at).toISOString(),
+    createdAt: new Date(Number(r.created_at)).toISOString(),
     score: r.score,
     crawled: r.pages,
     checksFailed: r.checks_failed,
@@ -254,12 +239,13 @@ export interface ScorePoint {
 }
 
 /** Score history for one site, oldest first, for the trend chart. */
-export function scoreHistory(siteId: number, limit = 60): ScorePoint[] {
-  return all<ScorePoint>(
+export async function scoreHistory(siteId: number, limit = 60): Promise<ScorePoint[]> {
+  const rows = await all<ScorePoint>(
     `SELECT id, created_at, score, checks_failed, blockers, criticals, warnings
      FROM crawls WHERE site_id = ? ORDER BY created_at DESC LIMIT ?`,
     siteId, limit,
-  ).reverse();
+  );
+  return rows.reverse();
 }
 
 export interface CrawlHistoryPoint {
@@ -274,23 +260,24 @@ export interface CrawlHistoryPoint {
 }
 
 /** Every crawl for the site that owns `crawlId`, oldest first — for the compare view. */
-export function crawlHistory(crawlId: string, limit = 40): CrawlHistoryPoint[] {
-  const row = get<{ site_id: number }>('SELECT site_id FROM crawls WHERE id = ?', crawlId);
+export async function crawlHistory(crawlId: string, limit = 40): Promise<CrawlHistoryPoint[]> {
+  const row = await get<{ site_id: number }>('SELECT site_id FROM crawls WHERE id = ?', crawlId);
   if (!row) return [];
-  return all<CrawlHistoryPoint>(
+  const rows = await all<CrawlHistoryPoint>(
     `SELECT id, created_at, score, pages, checks_failed, blockers, criticals, warnings
      FROM crawls WHERE site_id = ? ORDER BY created_at DESC LIMIT ?`,
     row.site_id, limit,
-  ).reverse();
+  );
+  return rows.reverse();
 }
 
 /** The crawl immediately preceding `crawlId` for the same site, if any. */
-export function previousCrawlId(crawlId: string): string | null {
-  const row = get<{ site_id: number; created_at: number }>(
+export async function previousCrawlId(crawlId: string): Promise<string | null> {
+  const row = await get<{ site_id: number; created_at: number }>(
     'SELECT site_id, created_at FROM crawls WHERE id = ?', crawlId,
   );
   if (!row) return null;
-  const prev = get<{ id: string }>(
+  const prev = await get<{ id: string }>(
     `SELECT id FROM crawls WHERE site_id = ? AND created_at < ?
      ORDER BY created_at DESC LIMIT 1`,
     row.site_id, row.created_at,
@@ -317,13 +304,13 @@ export interface ProjectSummary {
 }
 
 /** Every website as a project, with first/latest crawl so a trend is visible at a glance. */
-export function listProjects(): ProjectSummary[] {
-  const sites = all<Site>('SELECT * FROM sites ORDER BY created_at DESC');
-  return sites.map((s) => {
-    const agg = get<{ cnt: number }>('SELECT COUNT(*) AS cnt FROM crawls WHERE site_id = ?', s.id);
-    const first = get<{ score: number; created_at: number }>(
+export async function listProjects(): Promise<ProjectSummary[]> {
+  const sites = await all<Site>('SELECT * FROM sites ORDER BY created_at DESC');
+  return Promise.all(sites.map(async (s) => {
+    const agg = await get<{ cnt: number }>('SELECT COUNT(*) AS cnt FROM crawls WHERE site_id = ?', s.id);
+    const first = await get<{ score: number; created_at: number }>(
       'SELECT score, created_at FROM crawls WHERE site_id = ? ORDER BY created_at ASC LIMIT 1', s.id);
-    const latest = get<{ id: string; score: number; created_at: number; checks_failed: number; is_next: number }>(
+    const latest = await get<{ id: string; score: number; created_at: number; checks_failed: number; is_next: number }>(
       'SELECT id, score, created_at, checks_failed, is_next FROM crawls WHERE site_id = ? ORDER BY created_at DESC LIMIT 1', s.id);
     return {
       siteId: s.id, origin: s.origin, label: s.label,
@@ -333,16 +320,16 @@ export function listProjects(): ProjectSummary[] {
       latestAt: latest?.created_at ?? null, latestIssues: latest?.checks_failed ?? null,
       isNext: !!latest?.is_next,
     };
-  });
+  }));
 }
 
 /** Create (or find) a project for a website. Returns the site row. */
-export function createProject(url: string, label?: string): Site {
+export async function createProject(url: string, label?: string): Promise<Site> {
   return upsertSite(url, label);
 }
 
 /** Every crawl for one project, oldest first — powers the trend graphs. */
-export function projectCrawls(siteId: number, limit = 100): CrawlHistoryPoint[] {
+export async function projectCrawls(siteId: number, limit = 100): Promise<CrawlHistoryPoint[]> {
   return all<CrawlHistoryPoint>(
     `SELECT id, created_at, score, pages, checks_failed, blockers, criticals, warnings
      FROM crawls WHERE site_id = ? ORDER BY created_at ASC LIMIT ?`,
@@ -352,44 +339,14 @@ export function projectCrawls(siteId: number, limit = 100): CrawlHistoryPoint[] 
 
 /** Delete a project and everything under it (crawls, snapshots, keywords, backlinks, monitor). */
 export async function deleteProject(siteId: number): Promise<void> {
-  const ids = all<{ id: string }>('SELECT id FROM crawls WHERE site_id = ?', siteId);
-  for (const { id } of ids) jobs.delete(id);
-  run('DELETE FROM page_snapshots WHERE crawl_id IN (SELECT id FROM crawls WHERE site_id = ?)', siteId);
-  run('DELETE FROM sites WHERE id = ?', siteId); // ON DELETE CASCADE clears the rest
-
-  // Reports written before crawls moved into SQLite still sit on disk, and
-  // migrateLegacyReports() re-imports anything missing from the database on the
-  // next load — which would silently resurrect the project we just deleted.
-  await Promise.all(ids.map(({ id }) =>
-    fs.unlink(path.join(LEGACY_DIR, id + '.json')).catch(() => { /* already gone */ })));
+  const ids = await all<{ id: string }>('SELECT id FROM crawls WHERE site_id = ?', siteId);
+  for (const { id } of ids) await run('DELETE FROM crawl_jobs WHERE id = ?', id);
+  await run('DELETE FROM page_snapshots WHERE crawl_id IN (SELECT id FROM crawls WHERE site_id = ?)', siteId);
+  await run('DELETE FROM sites WHERE id = ?', siteId); // ON DELETE CASCADE clears the rest
 }
 
 export async function deleteReport(id: string): Promise<void> {
-  jobs.delete(id);
-  // Remove the on-disk copy too, otherwise the legacy import re-adds it.
-  await fs.unlink(path.join(LEGACY_DIR, id + '.json')).catch(() => { /* already gone */ });
-  // ON DELETE CASCADE covers this, but foreign keys are a PRAGMA that a future
-  // connection could open without — deleting explicitly keeps it correct either way.
-  run('DELETE FROM page_snapshots WHERE crawl_id = ?', id);
-  run('DELETE FROM crawls WHERE id = ?', id);
-}
-
-/** One-time import of reports written before crawls moved into SQLite. */
-async function migrateLegacyReports(): Promise<void> {
-  let files: string[];
-  try {
-    files = await fs.readdir(LEGACY_DIR);
-  } catch {
-    return; // no legacy directory
-  }
-
-  for (const f of files) {
-    if (!f.endsWith('.json')) continue;
-    const id = f.slice(0, -5);
-    if (get<{ id: string }>('SELECT id FROM crawls WHERE id = ?', id)) continue;
-    try {
-      const report = JSON.parse(await fs.readFile(path.join(LEGACY_DIR, f), 'utf8')) as AuditReport;
-      saveReport(report);
-    } catch { /* skip unreadable file */ }
-  }
+  await run('DELETE FROM crawl_jobs WHERE id = ?', id);
+  await run('DELETE FROM page_snapshots WHERE crawl_id = ?', id);
+  await run('DELETE FROM crawls WHERE id = ?', id);
 }

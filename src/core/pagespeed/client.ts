@@ -8,8 +8,7 @@
  * ever use.
  */
 import { createHash } from 'node:crypto';
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
+import { get, run } from '../../db/index.ts';
 import {
   classify, CWV_THRESHOLDS,
   type CoreWebVitalsData, type Metric, type ClsMetric,
@@ -17,7 +16,6 @@ import {
 } from './types.ts';
 
 const ENDPOINT = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
-const CACHE_DIR = path.join(process.cwd(), '.data', 'cache', 'pagespeed');
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const TIMEOUT_MS = 30_000;
 
@@ -39,16 +37,17 @@ function cacheDisabled(): boolean {
 
 function cacheKey(url: string, strategy: Strategy): string {
   const hash = createHash('sha256').update(url).digest('hex').slice(0, 20);
-  return `${hash}-${strategy}.json`;
+  return `pagespeed:${hash}-${strategy}`;
 }
 
 async function readCache(url: string, strategy: Strategy): Promise<CoreWebVitalsData | null> {
   try {
-    const file = path.join(CACHE_DIR, cacheKey(url, strategy));
-    const raw = await fs.readFile(file, 'utf8');
-    const data = JSON.parse(raw) as CoreWebVitalsData;
-    if (Date.now() - data.fetchedAt > CACHE_TTL_MS) return null;
-    return { ...data, fromCache: true };
+    const row = await get<{ value: string; fetched_at: number }>(
+      'SELECT value, fetched_at FROM kv_cache WHERE cache_key = ?', cacheKey(url, strategy),
+    );
+    if (!row) return null;
+    if (Date.now() - row.fetched_at > CACHE_TTL_MS) return null;
+    return { ...JSON.parse(row.value) as CoreWebVitalsData, fromCache: true };
   } catch {
     return null;
   }
@@ -56,11 +55,10 @@ async function readCache(url: string, strategy: Strategy): Promise<CoreWebVitals
 
 async function writeCache(data: CoreWebVitalsData): Promise<void> {
   try {
-    await fs.mkdir(CACHE_DIR, { recursive: true });
-    await fs.writeFile(
-      path.join(CACHE_DIR, cacheKey(data.url, data.strategy)),
-      JSON.stringify(data),
-      'utf8',
+    await run(
+      `INSERT INTO kv_cache (cache_key, value, fetched_at) VALUES (?, ?, ?)
+       ON CONFLICT(cache_key) DO UPDATE SET value = excluded.value, fetched_at = excluded.fetched_at`,
+      cacheKey(data.url, data.strategy), JSON.stringify(data), data.fetchedAt,
     );
   } catch { /* caching is best-effort; a failed write must not fail the audit */ }
 }

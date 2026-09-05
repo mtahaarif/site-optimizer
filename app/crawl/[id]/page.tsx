@@ -1,7 +1,7 @@
 import { loadReport, getJob } from '@/src/crawler/store.ts';
 import { CrawlView } from './view.tsx';
 
-// Reads live data from SQLite, so there is no static shell to prerender.
+// Reads live data from Postgres, so there is no static shell to prerender.
 export const instant = false;
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function CrawlPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const report = await loadReport(id);
-  const job = getJob(id);
+  const job = await getJob(id);
 
   return (
     <CrawlView

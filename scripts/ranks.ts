@@ -10,7 +10,7 @@
  *   node scripts/ranks.ts --add https://acme.com "seo audit tool" google mobile US "Austin,Texas,United States"
  *   node scripts/ranks.ts --add https://acme.com "seo audit tool" yandex desktop RU
  */
-import { closeDb, upsertSite, listSites, findSite } from '../src/db/index.ts';
+import { closePool, upsertSite } from '../src/db/index.ts';
 import {
   addKeyword, listKeywords, trackAll, keywordsWithRanks, allUsage,
 } from '../src/ranks/track.ts';
@@ -32,7 +32,7 @@ const arrow = (pos: number | null, prev: number | null): string => {
 
 async function main() {
   if (args[0] === '--usage') {
-    const usages = allUsage();
+    const usages = await allUsage();
     if (usages.length === 0) { log('No SERP provider configured.'); return 0; }
     log('Monthly SERP quota:');
     for (const u of usages) {
@@ -52,8 +52,8 @@ async function main() {
     if (!ENGINES.includes(engine as Engine)) { console.error('Unknown engine: ' + engine); return 1; }
     if (!DEVICES.includes(device as Device)) { console.error('Unknown device: ' + device); return 1; }
 
-    const site = upsertSite(url);
-    const kw = addKeyword({
+    const site = await upsertSite(url);
+    const kw = await addKeyword({
       siteId: site.id,
       phrase,
       engine: engine as Engine,
@@ -69,7 +69,7 @@ async function main() {
   }
 
   if (args[0] === '--list') {
-    const rows = keywordsWithRanks();
+    const rows = await keywordsWithRanks();
     if (rows.length === 0) { log('No keywords tracked yet.'); return 0; }
     log('POS  Δ    ENGINE   DEVICE   GEO                  KEYWORD');
     for (const r of rows) {
@@ -94,7 +94,7 @@ async function main() {
     return 1;
   }
 
-  const keywords = listKeywords();
+  const keywords = await listKeywords();
   if (keywords.length === 0) {
     log('No active keywords. Add one:');
     log('  node scripts/ranks.ts --add https://example.com "your keyword" google mobile US');
@@ -102,7 +102,7 @@ async function main() {
   }
 
   log(`Providers: ${providers.map((p) => p.name).join(', ')}`);
-  for (const u of allUsage()) log(`  ${u.provider}: ${u.used}/${u.limit} used this month`);
+  for (const u of await allUsage()) log(`  ${u.provider}: ${u.used}/${u.limit} used this month`);
   log(`\nTracking ${keywords.length} keyword(s)...\n`);
 
   const results = await trackAll();
@@ -126,7 +126,7 @@ async function main() {
   }
 
   log();
-  for (const u of allUsage()) log(`${u.provider}: ${u.used}/${u.limit} used, ${u.remaining} remaining this month`);
+  for (const u of await allUsage()) log(`${u.provider}: ${u.used}/${u.limit} used, ${u.remaining} remaining this month`);
   if (skipped) log(`${skipped} keyword(s) skipped — budget exhausted or no provider for that engine.`);
   return errors > 0 ? 1 : 0;
 }
@@ -137,5 +137,5 @@ try {
   console.error('rank tracking failed:', (err as Error).message);
   process.exitCode = 2;
 } finally {
-  closeDb();
+  await closePool();
 }

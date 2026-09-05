@@ -67,8 +67,8 @@ interface FetchRow {
   id: number; fetched_at: number; row_count: number; clicks: number; impressions: number;
 }
 
-function readCache(property: string, startDate: string, endDate: string): GscData | null {
-  const row = get<FetchRow>(
+async function readCache(property: string, startDate: string, endDate: string): Promise<GscData | null> {
+  const row = await get<FetchRow>(
     'SELECT id, fetched_at, row_count, clicks, impressions FROM gsc_fetches WHERE property = ? AND start_date = ? AND end_date = ?',
     property, startDate, endDate,
   );
@@ -78,7 +78,7 @@ function readCache(property: string, startDate: string, endDate: string): GscDat
   // that still overlaps the lag period expires.
   if (!isRangeFinal(endDate) && Date.now() - row.fetched_at > CACHE_TTL_MS) return null;
 
-  const metrics = all<{ url: string; url_key: string; clicks: number; impressions: number; ctr: number; position: number }>(
+  const metrics = await all<{ url: string; url_key: string; clicks: number; impressions: number; ctr: number; position: number }>(
     'SELECT url, url_key, clicks, impressions, ctr, position FROM gsc_page_metrics WHERE fetch_id = ?',
     row.id,
   );
@@ -101,20 +101,20 @@ function readCache(property: string, startDate: string, endDate: string): GscDat
   };
 }
 
-function writeCache(data: GscData): void {
-  tx(() => {
-    run('DELETE FROM gsc_fetches WHERE property = ? AND start_date = ? AND end_date = ?',
+async function writeCache(data: GscData): Promise<void> {
+  await tx(async () => {
+    await run('DELETE FROM gsc_fetches WHERE property = ? AND start_date = ? AND end_date = ?',
       data.property, data.startDate, data.endDate);
 
-    const { lastInsertRowid } = run(
+    const { lastInsertRowid } = await run(
       `INSERT INTO gsc_fetches (property, start_date, end_date, fetched_at, row_count, clicks, impressions)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
       data.property, data.startDate, data.endDate, data.fetchedAt,
       data.rowCount, data.totalClicks, data.totalImpressions,
     );
 
     for (const [key, m] of data.byUrl) {
-      run(
+      await run(
         `INSERT INTO gsc_page_metrics (fetch_id, url, url_key, clicks, impressions, ctr, position)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         lastInsertRowid, m.url, key, m.clicks, m.impressions, m.ctr, m.position,
@@ -162,7 +162,7 @@ export async function fetchPageMetrics(opts: {
   }
 
   if (!opts.skipCache) {
-    const cached = readCache(property, startDate, endDate);
+    const cached = await readCache(property, startDate, endDate);
     if (cached) return cached;
   }
 
@@ -232,7 +232,7 @@ export async function fetchPageMetrics(opts: {
       error: null,
     };
 
-    try { writeCache(result); } catch { /* caching is best-effort */ }
+    try { await writeCache(result); } catch { /* caching is best-effort */ }
     return result;
   } catch (err) {
     return empty((err as Error).message);
@@ -313,19 +313,19 @@ export async function fetchQueryMetrics(opts: {
   }
 }
 
-export function cachedRanges(): Array<{
+export async function cachedRanges(): Promise<Array<{
   property: string; startDate: string; endDate: string;
   rowCount: number; clicks: number; impressions: number; fetchedAt: number;
-}> {
+}>> {
   return all(
-    `SELECT property, start_date AS startDate, end_date AS endDate,
-            row_count AS rowCount, clicks, impressions, fetched_at AS fetchedAt
+    `SELECT property, start_date AS "startDate", end_date AS "endDate",
+            row_count AS "rowCount", clicks, impressions, fetched_at AS "fetchedAt"
      FROM gsc_fetches ORDER BY fetched_at DESC`,
   );
 }
 
-export function clearCache(): number {
-  const before = get<{ c: number }>('SELECT COUNT(*) c FROM gsc_fetches')?.c ?? 0;
-  run('DELETE FROM gsc_fetches');
+export async function clearCache(): Promise<number> {
+  const before = (await get<{ c: number }>('SELECT COUNT(*) c FROM gsc_fetches'))?.c ?? 0;
+  await run('DELETE FROM gsc_fetches');
   return before;
 }

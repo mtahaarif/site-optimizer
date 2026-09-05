@@ -33,7 +33,7 @@ function Delta({ latest, first }: { latest: number; first: number }) {
 
 export default async function ProjectsPage() {
   await connection();
-  const projects = listProjects();
+  const projects = await listProjects();
 
   return (
     <div className="flex flex-col gap-8">

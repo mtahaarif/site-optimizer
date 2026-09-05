@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { runAudit } from '@/src/crawler/audit.ts';
 import { DEFAULT_OPTIONS } from '@/src/crawler/crawl.ts';
 import {
@@ -56,10 +56,13 @@ export async function POST(req: Request) {
   };
 
   const id = crypto.randomUUID();
-  createJob(id, startUrl);
+  await createJob(id, startUrl);
 
-  // Run detached so the request returns immediately; the client polls /status.
-  void (async () => {
+  // The response returns immediately and the client polls /status; the crawl
+  // itself keeps running via after(), which is what actually keeps a
+  // serverless function alive past the point its response has been sent —
+  // an un-awaited promise alone is not a guarantee of that on Vercel.
+  after(async () => {
     try {
       // Snapshots are buffered, not written as they arrive: page_snapshots has a
       // foreign key to crawls(id), and that row does not exist until the report
@@ -67,16 +70,16 @@ export async function POST(req: Request) {
       let snapshots: PageSnapshot[] = [];
       const report = await runAudit(
         options,
-        (p) => updateProgress(id, p),
+        (p) => { void updateProgress(id, p); },
         { onSnapshots: (s) => { snapshots = s; } },
       );
       report.id = id;
       await completeJob(id, report);
-      saveSnapshots(id, snapshots);
+      await saveSnapshots(id, snapshots);
     } catch (err) {
-      failJob(id, (err as Error).message);
+      await failJob(id, (err as Error).message);
     }
-  })();
+  });
 
   return NextResponse.json({ id });
 }

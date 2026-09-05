@@ -34,8 +34,15 @@ const host = (url: string): string => {
 export default async function BacklinksPage() {
   await connection();
 
-  const sites = listSites();
+  const sites = await listSites();
   const gsc = gscConfigured();
+
+  const bySite = await Promise.all(sites.map(async (site) => ({
+    site,
+    links: await listBacklinks(site.id),
+    summary: await backlinkSummary(site.id),
+  })));
+  const anyLinks = bySite.some((s) => s.links.length > 0);
 
   return (
     <div className="flex flex-col gap-8">
@@ -79,10 +86,8 @@ node scripts/backlinks.ts https://example.com`}</pre>
         </div>
       )}
 
-      {sites.map((site) => {
-        const links = listBacklinks(site.id);
+      {bySite.map(({ site, links, summary: s }) => {
         if (links.length === 0) return null;
-        const s = backlinkSummary(site.id);
 
         return (
           <section key={site.id}>
@@ -151,7 +156,7 @@ node scripts/backlinks.ts https://example.com`}</pre>
         );
       })}
 
-      {sites.every((s) => listBacklinks(s.id).length === 0) && gsc && (
+      {!anyLinks && gsc && (
         <p className="py-8 text-center text-[14px] text-muted">
           No backlinks tracked yet. Run{' '}
           <code className="font-mono text-ink">node scripts/backlinks.ts --import-gsc &lt;url&gt;</code>

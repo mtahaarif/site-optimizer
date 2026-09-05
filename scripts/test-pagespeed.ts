@@ -8,6 +8,7 @@
  *   node scripts/test-pagespeed.ts
  */
 import { fetchPagespeed } from '../src/core/pagespeed/client.ts';
+import { closePool } from '../src/db/index.ts';
 
 const FIXTURE = {
   // Page-level CrUX: this URL has enough real traffic for field data.
@@ -138,5 +139,6 @@ if (d.ok) {
 }
 
 globalThis.fetch = realFetch;
+await closePool();
 console.log(failures === 0 ? '\nAll extraction assertions passed.\n' : `\n${failures} assertion(s) FAILED.\n`);
 process.exitCode = failures === 0 ? 0 : 1;

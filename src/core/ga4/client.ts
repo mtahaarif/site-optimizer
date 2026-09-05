@@ -88,8 +88,8 @@ export function pathOfUrl(url: string): string {
 // Cache
 // ---------------------------------------------------------------------------
 
-function readCache(propertyId: string, startDate: string, endDate: string): Ga4Data | null {
-  const rows = all<{
+async function readCache(propertyId: string, startDate: string, endDate: string): Promise<Ga4Data | null> {
+  const rows = await all<{
     url_path: string; pageviews: number; sessions: number; users: number;
     conversions: number; bounce_rate: number; avg_duration_sec: number; fetched_at: number;
   }>(
@@ -129,12 +129,12 @@ function readCache(propertyId: string, startDate: string, endDate: string): Ga4D
   };
 }
 
-function writeCache(data: Ga4Data): void {
-  tx(() => {
-    run('DELETE FROM ga4_metrics WHERE site_id = ? AND start_date = ? AND end_date = ?',
+async function writeCache(data: Ga4Data): Promise<void> {
+  await tx(async () => {
+    await run('DELETE FROM ga4_metrics WHERE site_id = ? AND start_date = ? AND end_date = ?',
       data.propertyId, data.startDate, data.endDate);
     for (const m of data.byPath.values()) {
-      run(
+      await run(
         `INSERT INTO ga4_metrics
            (site_id, url_path, start_date, end_date, pageviews, sessions, users,
             conversions, bounce_rate, avg_duration_sec, fetched_at)
@@ -192,7 +192,7 @@ export async function fetchGa4Metrics(opts: {
   }
 
   if (!opts.skipCache) {
-    const cached = readCache(propertyId, startDate, endDate);
+    const cached = await readCache(propertyId, startDate, endDate);
     if (cached) return cached;
   }
 
@@ -275,25 +275,25 @@ export async function fetchGa4Metrics(opts: {
       fromCache: false, fetchedAt: Date.now(), error: null,
     };
 
-    try { writeCache(result); } catch { /* caching is best-effort */ }
+    try { await writeCache(result); } catch { /* caching is best-effort */ }
     return result;
   } catch (err) {
     return empty((err as Error).message);
   }
 }
 
-export function ga4CacheStats(): Array<{
+export async function ga4CacheStats(): Promise<Array<{
   propertyId: string; startDate: string; endDate: string; paths: number; fetchedAt: number;
-}> {
+}>> {
   return all(
-    `SELECT site_id AS propertyId, start_date AS startDate, end_date AS endDate,
-            COUNT(*) AS paths, MAX(fetched_at) AS fetchedAt
-     FROM ga4_metrics GROUP BY site_id, start_date, end_date ORDER BY fetchedAt DESC`,
+    `SELECT site_id AS "propertyId", start_date AS "startDate", end_date AS "endDate",
+            COUNT(*) AS paths, MAX(fetched_at) AS "fetchedAt"
+     FROM ga4_metrics GROUP BY site_id, start_date, end_date ORDER BY "fetchedAt" DESC`,
   );
 }
 
-export function clearGa4Cache(): number {
-  const before = get<{ c: number }>('SELECT COUNT(*) c FROM ga4_metrics')?.c ?? 0;
-  run('DELETE FROM ga4_metrics');
+export async function clearGa4Cache(): Promise<number> {
+  const before = (await get<{ c: number }>('SELECT COUNT(*) c FROM ga4_metrics'))?.c ?? 0;
+  await run('DELETE FROM ga4_metrics');
   return before;
 }

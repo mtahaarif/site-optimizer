@@ -8,7 +8,7 @@
  *   node scripts/backlinks.ts --list <url> [status]
  */
 import { readFileSync } from 'node:fs';
-import { closeDb, upsertSite, findSite, listSites } from '../src/db/index.ts';
+import { closePool, upsertSite, findSite, listSites } from '../src/db/index.ts';
 import {
   verifyAll, importGscLinks, addBacklink, listBacklinks, backlinkSummary,
 } from '../src/backlinks/verify.ts';
@@ -32,9 +32,9 @@ async function main() {
     if (!access.ok) { console.error('Search Console access failed: ' + access.error); return 1; }
     log(`Connected to ${access.siteUrl}`);
 
-    const site = upsertSite(url);
+    const site = await upsertSite(url);
     const pages = await fetchReferringPages(90);
-    const added = importGscLinks(site.id, pages.map((p) => ({ sourceUrl: p, targetUrl: null })));
+    const added = await importGscLinks(site.id, pages.map((p) => ({ sourceUrl: p, targetUrl: null })));
     log(`Imported ${pages.length} page(s) from Search Analytics, ${added} new.`);
     log();
     log('Note: the Search Console API does not expose the Links report. For the full');
@@ -50,9 +50,9 @@ async function main() {
       console.error('usage: node scripts/backlinks.ts --import-csv <url> <csv-file>');
       return 1;
     }
-    const site = upsertSite(url);
+    const site = await upsertSite(url);
     const links = parseGscLinksCsv(readFileSync(file, 'utf8'));
-    const added = importGscLinks(site.id, links);
+    const added = await importGscLinks(site.id, links);
     log(`Parsed ${links.length} link(s) from ${file}, ${added} new.`);
     return 0;
   }
@@ -60,19 +60,19 @@ async function main() {
   if (args[0] === '--add') {
     const [, url, sourceUrl] = args;
     if (!url || !sourceUrl) { console.error('usage: node scripts/backlinks.ts --add <url> <sourceUrl>'); return 1; }
-    const site = upsertSite(url);
-    addBacklink(site.id, sourceUrl, null, 'manual');
+    const site = await upsertSite(url);
+    await addBacklink(site.id, sourceUrl, null, 'manual');
     log(`Tracking backlink from ${sourceUrl} to ${site.origin}`);
     return 0;
   }
 
   if (args[0] === '--list') {
     const url = args[1];
-    const site = url ? findSite(url) : listSites()[0];
+    const site = url ? await findSite(url) : (await listSites())[0];
     if (!site) { console.error('Site not found. Add a backlink first.'); return 1; }
     const status = args[2] as 'active' | 'lost' | 'broken' | 'unverified' | undefined;
-    const links = listBacklinks(site.id, status);
-    const s = backlinkSummary(site.id);
+    const links = await listBacklinks(site.id, status);
+    const s = await backlinkSummary(site.id);
 
     log(`${site.origin} — ${s.total} backlink(s) from ${s.referringDomains} domain(s)`);
     log(`  active ${s.active}   lost ${s.lost}   broken ${s.broken}   unverified ${s.unverified}`);
@@ -88,7 +88,7 @@ async function main() {
 
   // ---- default: verify a batch -------------------------------------------
   const url = args[0];
-  const site = url ? (findSite(url) ?? upsertSite(url)) : listSites()[0];
+  const site = url ? ((await findSite(url)) ?? (await upsertSite(url))) : (await listSites())[0];
   if (!site) {
     log('No site registered. Seed backlinks first:');
     log('  node scripts/backlinks.ts --import-gsc https://example.com');
@@ -96,7 +96,7 @@ async function main() {
     return 0;
   }
 
-  const pending = listBacklinks(site.id);
+  const pending = await listBacklinks(site.id);
   if (pending.length === 0) {
     log(`No backlinks tracked for ${site.origin}. Seed some first.`);
     return 0;
@@ -114,7 +114,7 @@ async function main() {
     if (r.transition === 'lost') lost++;
   }
 
-  const s = backlinkSummary(site.id);
+  const s = await backlinkSummary(site.id);
   log();
   log(`Checked ${results.length} of ${pending.length}.  active ${s.active} | lost ${s.lost} | broken ${s.broken}`);
   log(`dofollow ${s.dofollow} | nofollow ${s.nofollow} | ${s.referringDomains} referring domain(s)`);
@@ -128,5 +128,5 @@ try {
   console.error('backlink check failed:', (err as Error).message);
   process.exitCode = 2;
 } finally {
-  closeDb();
+  await closePool();
 }

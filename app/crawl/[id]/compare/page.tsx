@@ -37,8 +37,8 @@ export default async function ComparePage({ params }: { params: Promise<{ id: st
     );
   }
 
-  const history = crawlHistory(id);
-  const prevId = previousCrawlId(id);
+  const history = await crawlHistory(id);
+  const prevId = await previousCrawlId(id);
   const prev = prevId ? await loadReport(prevId) : null;
 
   return (

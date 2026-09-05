@@ -37,9 +37,9 @@ function Movement({ pos, prev }: { pos: number | null; prev: number | null }) {
 export default async function RanksPage() {
   await connection();
 
-  const rows = keywordsWithRanks();
+  const rows = await keywordsWithRanks();
   const providers = configuredProviders();
-  const usage = allUsage();
+  const usage = await allUsage();
 
   const ranked = rows.filter((r) => r.position !== null);
   const top10 = ranked.filter((r) => (r.position ?? 999) <= 10).length;

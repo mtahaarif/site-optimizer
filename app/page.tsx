@@ -80,7 +80,7 @@ function BigNum({ value, sub, tone }: { value: string | number; sub: string; ton
 export default async function Dashboard() {
   await connection();
 
-  const [reports, sites] = [await listReports(), listSites()];
+  const [reports, sites] = [await listReports(), await listSites()];
   const gscOn = gscConfigured();
   const gaOn = ga4Configured();
   const latest = reports[0] ?? null;
@@ -91,7 +91,7 @@ export default async function Dashboard() {
   const aiRisk = report ? jsDependentPages(report.pages ?? []).length : null;
 
   // Ranks.
-  const keywords = keywordsWithRanks();
+  const keywords = await keywordsWithRanks();
   const ranked = keywords.filter((k) => k.position !== null);
   const top10 = ranked.filter((k) => (k.position ?? 999) <= 10).length;
   const avgPos = ranked.length
@@ -99,9 +99,9 @@ export default async function Dashboard() {
     : null;
 
   // Backlinks — summed over every site.
-  const bl = sites.reduce(
-    (acc, site) => {
-      const b = backlinkSummary(site.id);
+  const siteSummaries = await Promise.all(sites.map((site) => backlinkSummary(site.id)));
+  const bl = siteSummaries.reduce(
+    (acc, b) => {
       acc.active += b.active; acc.lost += b.lost; acc.total += b.total;
       acc.referringDomains += b.referringDomains;
       return acc;

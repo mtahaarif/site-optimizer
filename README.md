@@ -1,7 +1,8 @@
 # SiteChecker
 
-A local-first search-visibility platform for Next.js sites. Seven modules over
-one SQLite file:
+A search-visibility platform for Next.js sites, deployed on Vercel with
+Postgres as its only infrastructure dependency. Seven modules over one
+database:
 
 1. **Site audit** — crawls any website and runs **332 checks** across 15
    categories, reporting every check pass *or* fail against a strict, published
@@ -24,9 +25,10 @@ Sitechecker's reporting model, a scoring formula that fixes a proven defect in
 theirs, an answer-engine layer neither competitor ships, and a Next.js check pack
 no general-purpose crawler can produce.
 
-**Zero infrastructure.** No account, no cloud, no VPS, no database server, no
-native modules to compile. Storage is one SQLite file via `node:sqlite`, which
-ships with Node. Scheduling is OS cron or GitHub Actions, both free.
+**Minimal infrastructure.** No custom backend, no VPS, no queue, no cache
+server, no native modules to compile. Storage is a single Postgres database —
+provisioned in one click as Vercel Postgres (Neon) or pointed at any other
+Postgres host. Scheduling is OS cron or GitHub Actions, both free.
 
 ---
 
@@ -48,7 +50,8 @@ ships with Node. Scheduling is OS cron or GitHub Actions, both free.
 - [View issue in code](#view-issue-in-code)
 - [JavaScript rendering](#javascript-rendering)
 - [Core Web Vitals](#core-web-vitals)
-- [Storage — one SQLite file](#storage--one-sqlite-file)
+- [Storage — Postgres](#storage--postgres)
+- [Deploying to Vercel](#deploying-to-vercel)
 - [Uptime monitoring and alerts](#uptime-monitoring-and-alerts)
 - [Rank tracking](#rank-tracking)
 - [Backlink tracking](#backlink-tracking)
@@ -66,8 +69,12 @@ ships with Node. Scheduling is OS cron or GitHub Actions, both free.
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000
+cp .env.example .env.local   # set POSTGRES_URL — see Storage below
+npm run dev                  # http://localhost:3000
 ```
+
+The database migrates itself: the first request that touches it creates every
+table. There is no separate migration command to remember.
 
 Enter a URL, press **Run audit**. The crawl runs in-process and the page polls
 for progress. When it finishes you get the score, every failing check with its
@@ -80,11 +87,10 @@ node scripts/cli.ts https://example.com 50     # url, max pages
 ```
 
 The scheduled modules are scripts rather than dashboard actions — they write to
-SQLite and the dashboard reads it:
+Postgres and the dashboard reads it, so results from a cron run or a GitHub
+Actions run appear on the dashboard immediately:
 
 ```bash
-cp .env.example .env.local     # optional; everything degrades gracefully without keys
-
 # uptime
 node scripts/monitor.ts --add https://example.com
 node scripts/monitor.ts
@@ -137,7 +143,7 @@ Requires **Node 22+** — the CLI scripts rely on native TypeScript stripping, s
 6. **Runs all 332 checks** — each one against every page in its scope.
 7. **Scores** every page and the site, weighted by internal PageRank and, when
    connected, by real Search Console impressions and GA4 sessions.
-8. **Persists** the report to SQLite (summary columns plus the full JSON blob),
+8. **Persists** the report to Postgres (summary columns plus the full JSON blob),
    with gzipped HTML snapshots for the code viewer.
 
 Then, on demand and separately from the crawl:
@@ -238,8 +244,14 @@ POST /api/rank                  →  one-off position check (web or local pack)
 POST /api/rank/track            →  refresh tracked keywords
 ```
 
-Job state lives in a `globalThis`-pinned `Map` (survives Next.js dev HMR);
-finished reports are written to SQLite so they survive a restart.
+Job progress lives in Postgres (`crawl_jobs`), not in process memory: the
+request that starts a crawl and the request that polls its progress are not
+guaranteed to land on the same serverless instance, so anything held only in a
+`Map` would be invisible to the poll as often as not. The crawl itself keeps
+running past the point the response is sent via Next's `after()`, which is
+what actually keeps a Vercel function alive for that work — an un-awaited
+promise alone is not a guarantee of that on a serverless runtime. Finished
+reports land in `crawls` and survive indefinitely.
 
 ```
                     ┌──────────────────────────┐
@@ -795,7 +807,7 @@ exists for it. That absence is itself the finding.
 node scripts/test-traffic.ts    # 40 assertions, both Google APIs mocked
 ```
 
-Covers path normalisation, duplicate-path summing, every GA4 check, SQLite cache
+Covers path normalisation, duplicate-path summing, every GA4 check, Postgres cache
 hits on re-audit, the weighting formula, the score spread above, and graceful
 degradation when neither source is configured.
 
@@ -1005,9 +1017,11 @@ PSI is slow and rate-limited, so it runs on a sample chosen *after* PageRank:
 the homepage at both strategies, then the highest-PageRank pages at mobile only.
 `maxPagespeedPages` (default 3) controls the count; 0 disables it.
 
-Responses cache to `.data/cache/pagespeed/` for 24 hours. Set
-`PAGESPEED_NO_CACHE=1` to bypass — necessary after deploying a fix, when
-yesterday's cached number is exactly the wrong answer.
+Responses cache in Postgres (`kv_cache`) for 24 hours — a generic table that
+also stands in for anything else that used to be a local disk cache, since
+Vercel's filesystem is read-only outside `/tmp` and not shared across
+invocations. Set `PAGESPEED_NO_CACHE=1` to bypass — necessary after deploying a
+fix, when yesterday's cached number is exactly the wrong answer.
 
 **On keyless requests.** Google permits them, and the client supports them, but
 the anonymous quota is shared globally and in practice is usually already
@@ -1036,14 +1050,14 @@ node scripts/test-cwv-checks.ts    # 30 pipeline assertions, PSI mocked end to e
 
 ---
 
-## Storage — one SQLite file
+## Storage — Postgres
 
-Everything lives in `.data/sitechecker.db`. Copy that one file and you have moved
-the entire installation.
-
-The driver is **`node:sqlite`, built into Node 22+**. That is the whole database
-dependency — no `better-sqlite3` to compile, no build tools on Windows, no
-service to install, no connection string, no Docker.
+Everything lives in one Postgres database — every module, one schema, one
+connection string (`POSTGRES_URL`). There is no ORM: `src/db/index.ts` is a
+~200-line wrapper around [`pg`](https://node-postgres.com), and every query in
+the codebase is still written with SQLite-style `?` placeholders, converted to
+`$1, $2, …` in one place so none of the 300+ call sites had to be rewritten by
+hand when the driver changed.
 
 ```
 sites             every monitored / crawled origin
@@ -1056,31 +1070,127 @@ api_usage         monthly SERP quota ledger
 backlinks         current state per referring page
 backlink_checks   verification history
 crawls            audit reports (summary columns + full JSON blob)
+crawl_jobs        in-flight crawl progress, polled across serverless instances
+page_snapshots    gzipped raw HTML per page, for "view issue in code"
 gsc_fetches       Search Console fetch log, one row per date range
 gsc_page_metrics  per-URL clicks, impressions, CTR, position
 ga4_metrics       per-path sessions, users, conversions, bounce rate
-page_snapshots    gzipped raw HTML per page, for "view issue in code"
 content_grades    one LLM content verdict per (crawl, page)
+kv_cache          generic cache (currently: PageSpeed Insights responses)
+schema_migrations tracks which migrations have run
 ```
 
-Migrations are forward-only and idempotent, tracked by `PRAGMA user_version`, so
-an existing database upgrades in place on next open.
+**Migrations run themselves.** The first query of any kind checks
+`schema_migrations`, a single-row table holding the current version, and
+applies every migration in `src/db/schema.ts` newer than it — each inside its
+own transaction, rolled back whole on failure. There is no `npm run migrate` to
+remember and no step in the Vercel build that needs to touch the database:
+deploy the app, and the schema catches up the first time anything queries it.
 
-**On WAL and the "single file" requirement.** The connection runs in WAL mode so
-a cron job can write while the dashboard reads. WAL means two sidecar files exist
-*while the database is open*. Every CLI script runs
-`PRAGMA wal_checkpoint(TRUNCATE)` on exit, which folds the log back into the main
-file and empties the sidecars.
+**Why not an ORM.** The schema is small and stable, every check and script
+already speaks SQL fluently, and a query builder would have meant rewriting the
+300+ call sites this migration already had to touch once. `pg.Pool` plus one
+`?`-to-`$n` translation layer was the entire cost of moving off SQLite; an ORM
+would have made it larger for no capability this project needs.
 
-That checkpoint is load-bearing, not tidiness: in WAL mode recent writes live in
-`sitechecker.db-wal` until a checkpoint moves them. A scheduled job that exited
-without one would leave its results out of the main file, and the GitHub Actions
-workflow — which commits only `.db` — would silently persist nothing.
+**Transactions across a connection pool.** SQLite's single connection made a
+transaction trivial: `BEGIN` and every query after it ran on the same handle by
+construction. A pool hands out whichever connection is free, so `tx(fn)` checks
+out one dedicated client, runs `BEGIN`, and uses `AsyncLocalStorage` to make
+every `all`/`get`/`run` call *inside* `fn` transparently reuse that same client
+rather than a fresh one from the pool — the only way nested queries stay part
+of the same transaction without threading a client argument through every
+function that might be called inside one.
 
-Secrets never go in the database, only in the environment, so the file stays
-safe to commit or copy.
+**Pool size on serverless.** Each Vercel invocation is its own process, so
+`Pool({ max: 5 })` here is deliberately small — it is not what absorbs
+concurrent traffic. That job belongs to Postgres' own connection pooler
+(PgBouncer, which Vercel Postgres/Neon puts in front of the pooled connection
+string it gives you); this pool just avoids one invocation opening more
+connections than it needs.
+
+Secrets never go in the database, only in the environment.
 
 ---
+
+## Deploying to Vercel
+
+> **Add auth before you share the URL.** The dashboard has none of its own —
+> no login, no session, nothing. Locally that's fine; on Vercel the app gets a
+> public URL, and anyone who has it can run crawls and read every stored
+> report. Turn on [Vercel Authentication](https://vercel.com/docs/security/deployment-protection)
+> (Project → Settings → Deployment Protection) before treating this as a real
+> deployment rather than a demo only you know the link to.
+
+```bash
+vercel link                        # or: New Project -> import this repo
+```
+
+**1. Add Postgres.** Project → Storage → Create Database → Postgres. This
+provisions a Neon-backed database and adds `POSTGRES_URL` (and a few related
+variables) to every environment automatically — nothing to copy by hand.
+
+**2. Add whatever else you use**, under Project → Settings → Environment
+Variables — see [`.env.example`](.env.example) for the full list. Everything
+except `POSTGRES_URL` is optional and degrades gracefully:
+
+```
+GEMINI_API_KEY / GROQ_API_KEY / ANTHROPIC_API_KEY   content grading
+SERPAPI_KEY / VALUESERP_KEY / DATAFORSEO_LOGIN+PASSWORD   rank tracking
+PAGESPEED_API_KEY                                   Core Web Vitals
+GOOGLE_SERVICE_ACCOUNT_JSON + GSC_SITE_URL           Search Console + backlinks
+GA4_PROPERTY_ID                                      Google Analytics 4
+SENDGRID_API_KEY / RESEND_API_KEY / ALERT_WEBHOOK_URL   uptime + backlink alerts
+```
+
+**3. Deploy.** `git push` (with the Vercel GitHub integration) or `vercel
+deploy`. The schema migrates itself on first query — there is no build-time
+migration step.
+
+**4. Wire up scheduling** — see [Scheduling](#scheduling) below. The dashboard
+itself never re-crawls, monitors, or checks ranks on its own; something has to
+invoke the scripts. GitHub Actions is the free option and needs the same
+`POSTGRES_URL` added as a repository secret.
+
+### Why the original SQLite version couldn't deploy here
+
+Worth stating plainly, since this is what a first deploy attempt runs into:
+Vercel's serverless functions have a **read-only filesystem outside `/tmp`**,
+and `/tmp` itself is **not shared** across invocations or persisted between
+them. A design that opens a local file — `new DatabaseSync('.data/sitechecker.db')`,
+or a disk cache under `.data/cache/` — either throws (`EROFS`) the first time it
+tries to write, or silently starts from empty on every single request, because
+"the file" was never the same file twice. That is not a Vercel misconfiguration
+to work around; it is the platform being what it says it is, and it is exactly
+why storage moved to Postgres rather than papering over the write.
+
+**A related, subtler gap this migration also had to close:** a crawl runs
+detached from the request that starts it, and the client polls a `GET` for
+progress. Holding that progress in a process-local `Map` works on a single
+long-running server, but two requests to a Vercel deployment are not
+guaranteed to land on the same underlying instance — so the poll can go to an
+instance that never ran the crawl and has nothing in memory to report. Progress
+now lives in the `crawl_jobs` table for exactly this reason, and the crawl's
+own background work is registered with Next's `after()` rather than left as an
+un-awaited promise, because a serverless function is not guaranteed to keep
+running once its response has been sent unless that work is explicitly
+registered to outlive it.
+
+### What is still a real constraint on Vercel
+
+- **Function duration.** `export const maxDuration = 900` is set on the crawl
+  route, but Vercel enforces its own ceiling per plan (as low as 10s on Hobby;
+  higher with Fluid compute or Pro/Enterprise). A crawl large enough to exceed
+  whatever your plan actually allows will be killed mid-run, and there is
+  currently no queue or resumable-worker path to pick it back up. Size
+  `maxPages` to what your plan's duration limit can plausibly finish.
+- **JavaScript rendering needs a real Chromium binary.** Playwright's browser
+  pool (see [JavaScript rendering](#javascript-rendering)) has nothing to
+  resolve to on a standard Vercel function. `--render-js` is a local/self-hosted
+  feature only, not something the deployed dashboard can offer.
+- **PageSpeed Insights is now read from and written to Postgres**, not a local
+  disk cache — no action needed, just noted because it is a behavioural change
+  from the original design.
 
 ## Uptime monitoring and alerts
 
@@ -1165,7 +1275,7 @@ Free tiers of 50–100 searches per month are small enough that spending them by
 accident is the single most likely way to break this module — one misconfigured
 cron schedule burns a month in an hour.
 
-So the budget is enforced **in SQLite before the call is made**, not left to the
+So the budget is enforced **in Postgres before the call is made**, not left to the
 provider to reject:
 
 ```
@@ -1238,9 +1348,11 @@ access token — about 40 lines, versus ~50 MB for the `googleapis` package.
 
 ## Scheduling
 
-Nothing runs on its own. The scripts are one-shot: a scheduler invokes them, they
-write to SQLite and exit. There is no daemon, which is precisely why there is
-nothing to pay a VPS for.
+The dashboard itself never re-crawls, monitors, or checks ranks on a schedule —
+the scripts are one-shot: a scheduler invokes them, they read and write
+Postgres directly, and exit. There is no daemon to host, and because every path
+(dashboard, cron, GitHub Actions) talks to the same database, results from a
+scheduled run show up on the dashboard immediately.
 
 ### Option A — your machine
 
@@ -1252,7 +1364,8 @@ awake**. Fine for weekly ranks and daily backlinks. Not adequate on its own for
 "24/7" uptime monitoring.
 
 Note that cron runs with a minimal environment and will **not** read
-`.env.local`; export the variables in the crontab or source them in a wrapper.
+`.env.local`; export `POSTGRES_URL` and everything else in the crontab, or
+source them in a wrapper script.
 
 ### Option B — GitHub Actions
 
@@ -1264,22 +1377,20 @@ Three workflows ship in `.github/workflows/`:
 | `backlinks.yml` | daily 04:00 UTC | batched, oldest-first |
 | `ranks.yml` | Mondays 06:00 UTC | weekly, to stay inside the free SERP tier |
 
-Public repos get unlimited Actions minutes; private repos get 2,000/month.
+Public repos get unlimited Actions minutes; private repos get 2,000/month. Each
+run writes straight to the same Postgres database the deployed app uses — add
+`POSTGRES_URL` under **Settings → Secrets and variables → Actions** alongside
+whatever else that workflow needs (see each file for its exact list). There is
+no database file to commit back to the repository and nothing that can race
+between two runs at the database layer, so the workflows no longer need the
+`concurrency` group or `permissions: contents: write` the SQLite version relied
+on for committing.
 
-The runner is stateless, so **the SQLite file is committed back to the repo**
-after each run — that is what turns a throwaway container into persistent
-history. All three share a `concurrency` group so two runs never race to commit
-the database.
-
-Two limits you should know before relying on this:
-
-- **Scheduled workflows are throttled under load.** A `*/15` schedule fires
-  roughly every 15–25 minutes, not exactly on the quarter hour.
-- **They are disabled after 60 days of repository inactivity.** Any commit
-  resets the clock.
-
-And if your repository is public, the committed database is public too. Secrets
-are never in it, but your URLs, keywords and rankings would be.
+One limit worth knowing before relying on this: **scheduled workflows are
+throttled under load**, so a `*/15` schedule fires roughly every 15–25 minutes,
+not exactly on the quarter hour — acceptable for alerting, not an SLA. GitHub
+also disables a workflow's schedule after 60 days with no repository activity;
+any commit resets that clock.
 
 ---
 
@@ -1348,9 +1459,10 @@ covered distinct failures.
   weight change — and trend charts refuse to plot across a rubric boundary.
 - **Backlink verification is free**, seeded from Search Console and confirmed by
   actually fetching the referring page.
-- **The SERP quota ledger** — free tiers metered in SQLite before a call is made.
-- **Runs locally, or free on GitHub Actions.** No account, no page limits, no
-  subscription, and no data leaving your machine unless you choose.
+- **The SERP quota ledger** — free tiers metered in Postgres before a call is made.
+- **Self-hostable at cost, not rented.** Runs locally against any Postgres, or
+  deployed on Vercel with a free Postgres tier — no subscription, no per-seat
+  pricing, no page-count paywall. You own the database either way.
 
 ---
 
@@ -1412,7 +1524,7 @@ session. Two different numbers for the same crawl, unexplained.
 | **Content grading rigour** | Their Scholar returns 12 metrics with no visible rubric. Ours returns 7 dimensions plus a plain-English verdict, named strengths, and up to five page-specific fixes — with a prompt that explicitly forbids generic advice and refuses to reward length. |
 | **Next.js white-box** | 15 framework checks no black-box crawler can produce, and the render-strategy data that makes the AEO analysis possible. |
 | **Correctness loop** | We audit our own app. That found a real crawler bug (alias URLs stored twice and reported as duplicates of themselves) polluting findings on every site. Their product shows no evidence of such a loop, and ships two contradictory scores for one crawl. |
-| **Cost and privacy** | Free, local, no account, no data leaving the machine. |
+| **Cost** | No subscription, no per-seat pricing, no page-count paywall — self-host it or deploy it, at the cost of a database. |
 
 ---
 
@@ -1488,8 +1600,12 @@ Things worth knowing before trusting a number:
    configuration. A site with no www DNS record passes.
 9. **TLS check uses `node:tls` directly** and can report failures for
    certificates a browser would accept via a different trust path.
-10. **Crawl state is in-process.** Restarting the dev server mid-crawl loses the
-    job; finished reports survive in SQLite.
+10. **A crawl killed mid-run by a function-duration limit cannot resume.**
+    Progress polling survives across serverless instances (it lives in
+    Postgres), but if the platform kills the invocation itself — Vercel's
+    per-plan `maxDuration` ceiling — the crawl stops with no queue to pick it
+    back up. Size `maxPages` to what your plan can finish; locally there is no
+    such ceiling.
 11. **Local cron is not 24/7.** A sleeping laptop stops monitoring. Genuine
     round-the-clock coverage needs the GitHub Actions path, itself throttled
     under load and auto-disabled after 60 days of repo inactivity.
@@ -1499,8 +1615,14 @@ Things worth knowing before trusting a number:
     searches a month is roughly 20 keywords checked weekly.
 14. **Alerts are not deduplicated across channels.** Configuring SendGrid *and* a
     webhook sends both, deliberately.
-15. **No auth on the dashboard.** It binds to localhost and assumes a single
-    trusted user. Do not expose it to a network.
+15. **No auth on the dashboard, at all.** Locally this was low-risk — bound to
+    localhost, one trusted user. **Deployed on Vercel it is a real exposure**:
+    the app gets a public URL and anyone who finds it can run crawls, read
+    every stored report, and see whatever Search Console / GA4 data is
+    connected. Put it behind [Vercel Authentication](https://vercel.com/docs/security/deployment-protection)
+    (password or SSO protection on the project) or your own middleware before
+    a real deployment goes anywhere near a URL someone else could guess or
+    stumble onto.
 16. **Core Web Vitals sample, they don't cover.** PSI runs on the homepage plus
     the top few pages by PageRank, so the CWV verdict is "the pages we measured".
 17. **Code view covers 137 of 332 checks.** The remainder have no source position
@@ -1580,9 +1702,9 @@ src/core/
   llm/provider.ts                 Gemini / Groq / Anthropic, one JSON interface
   aeo/analyze.ts                  AI crawler access, JS gap, llms.txt, quotability
   gsc/auth.ts                     shared service-account JWT (GSC + GA4)
-  gsc/client.ts                   Search Analytics query + SQLite cache
+  gsc/client.ts                   Search Analytics query + Postgres cache
   ga4/client.ts                   GA4 Data API runReport + 24h cache
-  pagespeed/                      PSI v5 client, disk cache, field/lab resolution
+  pagespeed/                      PSI v5 client, Postgres-cached, field/lab resolution
   utils/code.ts                   offset → line number + surrounding source
 
 src/crawler/
@@ -1591,11 +1713,11 @@ src/crawler/
   sitemap.ts                      sitemap discovery, index expansion, validation
   browser.ts                      Playwright pool, resource blocking, SPA detection
   audit.ts                        crawl → checks → score → AuditReport
-  store.ts                        projects, crawl persistence, snapshots
+  store.ts                        projects, crawl persistence, job progress, snapshots
 
 src/db/
-  index.ts                        node:sqlite connection, migrations, helpers
-  schema.ts                       forward-only migrations, tracked by user_version
+  index.ts                        pg.Pool, self-running migrations, ? -> $n, tx() via AsyncLocalStorage
+  schema.ts                       forward-only migrations, tracked by schema_migrations
 
 src/monitor/check.ts              polling, incidents, uptime reporting
 src/alerts/send.ts                SendGrid / Resend / webhook / console delivery
@@ -1625,7 +1747,6 @@ scripts/
 
 .github/workflows/                monitor / ranks / backlinks schedules
 .env.example                      every supported environment variable
-.data/sitechecker.db              the single SQLite file (gitignored locally)
 ```
 
 ---

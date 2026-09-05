@@ -7,11 +7,9 @@ next-env.d.ts
 .env
 .env.local
 
-# PSI response cache (24h TTL, regenerates itself)
-.data/cache/
-
-# Local data. The GitHub Actions workflows commit the database explicitly with
-# `git add -f` when you want history to persist across stateless runs.
+# Leftover local state from the pre-Postgres version (old SQLite db + disk
+# cache). Nothing in the app writes here anymore; kept ignored so it never
+# gets swept into a commit by accident.
 .data/
 
 # Research corpus (179 downloaded HTML files)

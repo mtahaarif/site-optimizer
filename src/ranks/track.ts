@@ -3,7 +3,8 @@
  *
  * Free SERP tiers are 50-100 searches per month. One misconfigured cron
  * schedule can burn a month's quota in an hour, so the budget is enforced here
- * in SQLite before any paid call is made — not left to the provider to reject.
+ * in the database before any paid call is made — not left to the provider to
+ * reject.
  */
 import { all, get, run, listSites, upsertSite, type Site } from '../db/index.ts';
 import { pickProvider, configuredProviders, type Engine, type Device } from './providers.ts';
@@ -52,9 +53,9 @@ export function monthlyLimit(provider: string): number {
 
 export interface Usage { provider: string; period: string; used: number; limit: number; remaining: number }
 
-export function usage(provider: string): Usage {
+export async function usage(provider: string): Promise<Usage> {
   const p = period();
-  const row = get<{ used: number }>(
+  const row = await get<{ used: number }>(
     'SELECT used FROM api_usage WHERE provider = ? AND period = ?', provider, p,
   );
   const used = row?.used ?? 0;
@@ -62,15 +63,15 @@ export function usage(provider: string): Usage {
   return { provider, period: p, used, limit, remaining: Math.max(0, limit - used) };
 }
 
-export function allUsage(): Usage[] {
-  return configuredProviders().map((p) => usage(p.name));
+export async function allUsage(): Promise<Usage[]> {
+  return Promise.all(configuredProviders().map((p) => usage(p.name)));
 }
 
-function consume(provider: string): void {
+async function consume(provider: string): Promise<void> {
   const p = period();
-  run(
+  await run(
     `INSERT INTO api_usage (provider, period, used, limit_hint) VALUES (?, ?, 1, ?)
-     ON CONFLICT(provider, period) DO UPDATE SET used = used + 1`,
+     ON CONFLICT(provider, period) DO UPDATE SET used = api_usage.used + 1`,
     provider, p, monthlyLimit(provider),
   );
 }
@@ -89,13 +90,13 @@ export interface AddKeywordInput {
   language?: string | null;
 }
 
-export function addKeyword(input: AddKeywordInput): Keyword {
+export async function addKeyword(input: AddKeywordInput): Promise<Keyword> {
   const { siteId, phrase, engine, device } = input;
   const country = input.country ?? null;
   const city = input.city ?? null;
   const language = input.language ?? null;
 
-  run(
+  await run(
     `INSERT INTO keywords (site_id, phrase, engine, device, country, city, language, active, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
      ON CONFLICT(site_id, phrase, engine, device, country, city)
@@ -103,14 +104,14 @@ export function addKeyword(input: AddKeywordInput): Keyword {
     siteId, phrase.trim(), engine, device, country, city, language, Date.now(),
   );
 
-  return get<Keyword>(
+  return (await get<Keyword>(
     `SELECT * FROM keywords WHERE site_id = ? AND phrase = ? AND engine = ? AND device = ?
-       AND country IS ? AND city IS ?`,
+       AND country IS NOT DISTINCT FROM ? AND city IS NOT DISTINCT FROM ?`,
     siteId, phrase.trim(), engine, device, country, city,
-  )!;
+  ))!;
 }
 
-export function listKeywords(siteId?: number, onlyActive = true): Keyword[] {
+export async function listKeywords(siteId?: number, onlyActive = true): Promise<Keyword[]> {
   const where = [onlyActive ? 'active = 1' : null, siteId ? 'site_id = ' + Number(siteId) : null]
     .filter(Boolean).join(' AND ');
   return all<Keyword>(
@@ -118,8 +119,8 @@ export function listKeywords(siteId?: number, onlyActive = true): Keyword[] {
   );
 }
 
-export function removeKeyword(id: number): void {
-  run('UPDATE keywords SET active = 0 WHERE id = ?', id);
+export async function removeKeyword(id: number): Promise<void> {
+  await run('UPDATE keywords SET active = 0 WHERE id = ?', id);
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +149,7 @@ function matchesSite(resultUrl: string, origin: string): boolean {
   }
 }
 
-export function latestSnapshot(keywordId: number): RankSnapshot | undefined {
+export async function latestSnapshot(keywordId: number): Promise<RankSnapshot | undefined> {
   return get<RankSnapshot>(
     'SELECT * FROM rank_snapshots WHERE keyword_id = ? ORDER BY checked_at DESC LIMIT 1',
     keywordId,
@@ -221,7 +222,7 @@ export async function checkRank(input: CheckRankInput): Promise<RankCheck[]> {
       continue;
     }
 
-    const budget = usage(provider.name);
+    const budget = await usage(provider.name);
     if (budget.remaining <= 0) {
       out.push({
         engine, provider: provider.name, position: null, url: null, title: null,
@@ -241,7 +242,7 @@ export async function checkRank(input: CheckRankInput): Promise<RankCheck[]> {
       scope,
     });
     // A call was made — meter it whether or not it found the domain.
-    consume(provider.name);
+    await consume(provider.name);
 
     const hit = response.results.find((r) => matchesSite(r.url, origin));
     out.push({
@@ -265,12 +266,12 @@ export async function checkRank(input: CheckRankInput): Promise<RankCheck[]> {
  * a history over time. Local (map) checks are not persisted yet — they stay
  * on-demand. Returns how many keyword rows were saved.
  */
-export function saveTrackedCheck(input: CheckRankInput, results: RankCheck[]): number {
-  const site = upsertSite(input.domain);
+export async function saveTrackedCheck(input: CheckRankInput, results: RankCheck[]): Promise<number> {
+  const site = await upsertSite(input.domain);
   let saved = 0;
   for (const r of results) {
     if (r.skipped) continue;
-    const kw = addKeyword({
+    const kw = await addKeyword({
       siteId: site.id,
       phrase: input.keyword,
       engine: r.engine,
@@ -279,7 +280,7 @@ export function saveTrackedCheck(input: CheckRankInput, results: RankCheck[]): n
       city: input.city ?? null,
       language: input.language ?? null,
     });
-    run(
+    await run(
       `INSERT INTO rank_snapshots
          (keyword_id, checked_at, position, url, title, serp_features, results_checked, provider, error)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -293,7 +294,7 @@ export function saveTrackedCheck(input: CheckRankInput, results: RankCheck[]): n
 
 export async function trackKeyword(keyword: Keyword, site: Site): Promise<TrackResult> {
   const provider = pickProvider(keyword.engine);
-  const previous = latestSnapshot(keyword.id)?.position ?? null;
+  const previous = (await latestSnapshot(keyword.id))?.position ?? null;
 
   if (!provider) {
     return {
@@ -303,7 +304,7 @@ export async function trackKeyword(keyword: Keyword, site: Site): Promise<TrackR
     };
   }
 
-  const budget = usage(provider.name);
+  const budget = await usage(provider.name);
   if (budget.remaining <= 0) {
     return {
       keyword, position: null, previousPosition: previous, url: null,
@@ -322,12 +323,12 @@ export async function trackKeyword(keyword: Keyword, site: Site): Promise<TrackR
   });
 
   // A failed call still consumed quota at most providers, so meter it either way.
-  consume(provider.name);
+  await consume(provider.name);
 
   const hit = response.results.find((r) => matchesSite(r.url, site.origin));
   const now = Date.now();
 
-  run(
+  await run(
     `INSERT INTO rank_snapshots
        (keyword_id, checked_at, position, url, title, serp_features, results_checked, provider, error)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -351,8 +352,8 @@ export async function trackKeyword(keyword: Keyword, site: Site): Promise<TrackR
  * than failing partway through with half the data written.
  */
 export async function trackAll(siteId?: number): Promise<TrackResult[]> {
-  const sites = new Map(listSites().map((s) => [s.id, s]));
-  const keywords = listKeywords(siteId);
+  const sites = new Map((await listSites()).map((s) => [s.id, s]));
+  const keywords = await listKeywords(siteId);
   const out: TrackResult[] = [];
 
   for (const kw of keywords) {
@@ -383,11 +384,11 @@ export interface KeywordWithRank extends Keyword {
 /**
  * Current position plus the one before it, per keyword.
  *
- * The correlated subqueries keep this a single round trip; at the scale a local
- * tool tracks (tens to low hundreds of keywords) that is comfortably fast and
- * far simpler than materialising a movement table.
+ * The correlated subqueries keep this a single round trip; at the scale a
+ * tool like this tracks (tens to low hundreds of keywords) that is comfortably
+ * fast and far simpler than materialising a movement table.
  */
-export function keywordsWithRanks(siteId?: number): KeywordWithRank[] {
+export async function keywordsWithRanks(siteId?: number): Promise<KeywordWithRank[]> {
   const where = siteId ? 'WHERE k.active = 1 AND k.site_id = ' + Number(siteId) : 'WHERE k.active = 1';
   return all<KeywordWithRank>(`
     SELECT k.*, s.origin,
@@ -410,7 +411,7 @@ export function keywordsWithRanks(siteId?: number): KeywordWithRank[] {
   `);
 }
 
-export function rankHistory(keywordId: number, limit = 90): RankSnapshot[] {
+export async function rankHistory(keywordId: number, limit = 90): Promise<RankSnapshot[]> {
   return all<RankSnapshot>(
     'SELECT * FROM rank_snapshots WHERE keyword_id = ? ORDER BY checked_at DESC LIMIT ?',
     keywordId, limit,

@@ -22,9 +22,9 @@ export async function GET(req: Request, { params }: Ctx) {
   const url = q.get('url');
   if (!url) return NextResponse.json({ error: 'Missing url parameter' }, { status: 400 });
 
-  const snapshot = loadSnapshot(id, url);
+  const snapshot = await loadSnapshot(id, url);
   if (!snapshot) {
-    const stats = snapshotStats(id);
+    const stats = await snapshotStats(id);
     return NextResponse.json(
       {
         error: stats.count === 0

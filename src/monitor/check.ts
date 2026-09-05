@@ -121,7 +121,7 @@ async function tlsDaysRemaining(origin: string): Promise<number | null> {
 
 // ---------------------------------------------------------------------------
 
-export function openIncident(siteId: number): Incident | undefined {
+export async function openIncident(siteId: number): Promise<Incident | undefined> {
   return get<Incident>(
     'SELECT * FROM incidents WHERE site_id = ? AND resolved_at IS NULL ORDER BY started_at DESC LIMIT 1',
     siteId,
@@ -145,7 +145,7 @@ export async function checkSite(site: Site): Promise<MonitorResult> {
   const now = Date.now();
   const sslDays = await tlsDaysRemaining(site.origin);
 
-  run(
+  await run(
     `INSERT INTO monitor_checks
        (site_id, checked_at, url, status, ok, response_ms, error, redirect_to, body_hash, ssl_days_remaining)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -153,16 +153,16 @@ export async function checkSite(site: Site): Promise<MonitorResult> {
     r.error, r.redirectTo, r.bodyHash, sslDays,
   );
 
-  const existing = openIncident(site.id);
+  const existing = await openIncident(site.id);
   let transition: MonitorResult['transition'] = 'none';
   let alerted = false;
 
   if (!ok && !existing) {
     // First failure: open an incident and alert once.
     transition = 'went-down';
-    const { lastInsertRowid } = run(
+    const { lastInsertRowid } = await run(
       `INSERT INTO incidents (site_id, started_at, first_status, last_status, failure_count, error)
-       VALUES (?, ?, ?, ?, 1, ?)`,
+       VALUES (?, ?, ?, ?, 1, ?) RETURNING id`,
       site.id, now, r.status, r.status, r.error,
     );
     await sendAlert({
@@ -183,13 +183,13 @@ export async function checkSite(site: Site): Promise<MonitorResult> {
   } else if (!ok && existing) {
     // Already known to be down. Update the incident, stay quiet.
     transition = 'still-down';
-    run(
+    await run(
       'UPDATE incidents SET failure_count = failure_count + 1, last_status = ?, error = ? WHERE id = ?',
       r.status, r.error, existing.id,
     );
   } else if (ok && existing) {
     transition = 'recovered';
-    run('UPDATE incidents SET resolved_at = ? WHERE id = ?', now, existing.id);
+    await run('UPDATE incidents SET resolved_at = ? WHERE id = ?', now, existing.id);
     await sendAlert({
       kind: 'recovered',
       siteId: site.id,
@@ -209,7 +209,7 @@ export async function checkSite(site: Site): Promise<MonitorResult> {
   // Certificate expiry is a separate concern from uptime: the site is up right
   // up until the moment it is catastrophically not.
   if (sslDays !== null && sslDays <= SSL_WARN_DAYS && sslDays >= 0) {
-    const alreadyWarned = get<{ c: number }>(
+    const alreadyWarned = await get<{ c: number }>(
       `SELECT COUNT(*) c FROM alerts
        WHERE site_id = ? AND kind = 'ssl_expiring' AND sent_at > ?`,
       site.id, now - 86_400_000,
@@ -241,13 +241,13 @@ export async function checkSite(site: Site): Promise<MonitorResult> {
 
 /** Poll every registered site. This is what the cron entry point calls. */
 export async function checkAllSites(): Promise<MonitorResult[]> {
-  const sites = listSites();
+  const sites = await listSites();
   const out: MonitorResult[] = [];
   for (const site of sites) out.push(await checkSite(site));
   return out;
 }
 
-export function addMonitoredSite(url: string, label?: string): Site {
+export async function addMonitoredSite(url: string, label?: string): Promise<Site> {
   return upsertSite(url, label);
 }
 
@@ -266,11 +266,11 @@ export interface UptimeSummary {
   sslDaysRemaining: number | null;
 }
 
-export function uptimeSummary(siteId: number, sinceMs: number): UptimeSummary | null {
-  const site = get<Site>('SELECT * FROM sites WHERE id = ?', siteId);
+export async function uptimeSummary(siteId: number, sinceMs: number): Promise<UptimeSummary | null> {
+  const site = await get<Site>('SELECT * FROM sites WHERE id = ?', siteId);
   if (!site) return null;
 
-  const agg = get<{ checks: number; failures: number; avg: number | null }>(
+  const agg = await get<{ checks: number; failures: number; avg: number | null }>(
     `SELECT COUNT(*) checks,
             SUM(CASE WHEN ok = 0 THEN 1 ELSE 0 END) failures,
             AVG(response_ms) avg
@@ -278,7 +278,7 @@ export function uptimeSummary(siteId: number, sinceMs: number): UptimeSummary | 
     siteId, sinceMs,
   );
 
-  const last = get<MonitorCheck>(
+  const last = await get<MonitorCheck>(
     'SELECT * FROM monitor_checks WHERE site_id = ? ORDER BY checked_at DESC LIMIT 1', siteId,
   );
 
@@ -292,19 +292,19 @@ export function uptimeSummary(siteId: number, sinceMs: number): UptimeSummary | 
     uptimePct: checks > 0 ? ((checks - failures) / checks) * 100 : 100,
     avgResponseMs: Math.round(agg?.avg ?? 0),
     lastCheck: last ?? null,
-    openIncident: openIncident(siteId) ?? null,
+    openIncident: (await openIncident(siteId)) ?? null,
     sslDaysRemaining: last?.ssl_days_remaining ?? null,
   };
 }
 
-export function recentChecks(siteId: number, limit = 100): MonitorCheck[] {
+export async function recentChecks(siteId: number, limit = 100): Promise<MonitorCheck[]> {
   return all<MonitorCheck>(
     'SELECT * FROM monitor_checks WHERE site_id = ? ORDER BY checked_at DESC LIMIT ?',
     siteId, limit,
   );
 }
 
-export function recentIncidents(siteId?: number, limit = 25): Incident[] {
+export async function recentIncidents(siteId?: number, limit = 25): Promise<Incident[]> {
   return siteId
     ? all<Incident>('SELECT * FROM incidents WHERE site_id = ? ORDER BY started_at DESC LIMIT ?', siteId, limit)
     : all<Incident>('SELECT * FROM incidents ORDER BY started_at DESC LIMIT ?', limit);

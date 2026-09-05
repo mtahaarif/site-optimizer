@@ -15,7 +15,7 @@ export const instant = false;
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const site = getSite(Number(id));
+  const site = await getSite(Number(id));
   const raw = site ? site.origin.replace(/^https?:\/\//, '') : 'Project';
   const host = raw.length > 25 ? raw.slice(0, 25) + '…' : raw; // keep the title under 60 chars
   return {
@@ -47,7 +47,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   await connection();
   const { id } = await params;
   const siteId = Number(id);
-  const site = getSite(siteId);
+  const site = await getSite(siteId);
 
   if (!site) {
     return (
@@ -58,7 +58,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  const history = projectCrawls(siteId); // oldest → newest
+  const history = await projectCrawls(siteId); // oldest → newest
   const host = site.origin.replace(/^https?:\/\//, '');
 
   // Only the first and latest reports are needed: the latest drives the full

@@ -12,9 +12,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  experimental: {
-    cacheComponents: true,
-  },
+  cacheComponents: true,
   async redirects() {
     // The flat crawl list is superseded by the project model. A config-level
     // permanent redirect keeps old links working without rendering a second

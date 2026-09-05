@@ -1,116 +1,164 @@
 /**
- * SQLite connection and migration runner.
+ * Postgres connection and migration runner (Vercel Postgres / Neon).
  *
- * `node:sqlite` ships with Node, so this is the entire database dependency:
- * no build step, no daemon, no connection string. The file lives at
- * .data/sitechecker.db and is the single source of truth for every module.
+ * Every module — crawls, monitoring, ranks, backlinks, GSC/GA4 caches, content
+ * grades — reads and writes through the same pool, so one connection string is
+ * the entire persistence configuration.
+ *
+ * `all`/`get`/`run` accept SQLite-style `?` placeholders (in order) so the 300+
+ * call sites across the codebase did not need individually renumbered `$1, $2…`
+ * params; the conversion happens once, here.
  */
-import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
-import path from 'node:path';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { Pool, type PoolClient } from 'pg';
 import { MIGRATIONS } from './schema.ts';
 
-export type DB = DatabaseSync;
+const connectionString = process.env['POSTGRES_URL']
+  ?? process.env['DATABASE_URL']
+  ?? process.env['POSTGRES_URL_NON_POOLING'];
 
-export const DB_PATH = process.env['SITECHECKER_DB']
-  ?? path.join(process.cwd(), '.data', 'sitechecker.db');
-
-const g = globalThis as unknown as { __sitecheckerDb?: DatabaseSync };
+const g = globalThis as unknown as { __sitecheckerPool?: Pool; __sitecheckerMigrated?: Promise<void> };
 
 /**
- * Open (once) and migrate the database.
- *
- * The handle is pinned to globalThis so Next.js dev HMR reuses one connection
- * instead of opening a new file handle on every hot reload.
+ * One pool per process, pinned to globalThis so Next.js dev HMR reuses it
+ * instead of opening a new connection set on every hot reload. `max` is kept
+ * small because each serverless invocation is its own process — Vercel
+ * Postgres' pooled connection string (PgBouncer) is what absorbs the fan-out
+ * across concurrently-running functions, not this pool.
  */
-export function db(): DatabaseSync {
-  if (g.__sitecheckerDb) return g.__sitecheckerDb;
-
-  mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  const conn = new DatabaseSync(DB_PATH);
-
-  // WAL lets the dashboard read while a cron job writes — the two processes
-  // touch the same file and would otherwise block each other.
-  conn.exec('PRAGMA journal_mode = WAL');
-  conn.exec('PRAGMA foreign_keys = ON');
-  conn.exec('PRAGMA busy_timeout = 5000');
-
-  migrate(conn);
-  g.__sitecheckerDb = conn;
-  return conn;
-}
-
-function migrate(conn: DatabaseSync): void {
-  const row = conn.prepare('PRAGMA user_version').get() as { user_version: number } | undefined;
-  const current = row?.user_version ?? 0;
-
-  for (let i = current; i < MIGRATIONS.length; i++) {
-    conn.exec('BEGIN');
-    try {
-      conn.exec(MIGRATIONS[i]!);
-      conn.exec(`PRAGMA user_version = ${i + 1}`);
-      conn.exec('COMMIT');
-    } catch (err) {
-      conn.exec('ROLLBACK');
-      throw new Error(`Migration ${i + 1} failed: ${(err as Error).message}`);
-    }
+function pool(): Pool {
+  if (g.__sitecheckerPool) return g.__sitecheckerPool;
+  if (!connectionString) {
+    throw new Error(
+      'No database configured. Set POSTGRES_URL (or DATABASE_URL) — ' +
+      'the connection string Vercel Postgres gives you when you add the integration.',
+    );
   }
-}
-
-/**
- * Fold the write-ahead log back into the main database file and close.
- *
- * The checkpoint is not optional housekeeping. In WAL mode recent writes live
- * in `sitechecker.db-wal` until a checkpoint moves them into `sitechecker.db`,
- * so a scheduled job that exits without checkpointing leaves its results out of
- * the main file — and the GitHub Actions workflow, which commits only the `.db`,
- * would silently persist nothing. TRUNCATE also removes the sidecar files, so a
- * cleanly exited process leaves exactly one file on disk.
- */
-export function closeDb(): void {
-  if (!g.__sitecheckerDb) return;
-  try { g.__sitecheckerDb.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* nothing to fold */ }
-  try { g.__sitecheckerDb.close(); } catch { /* already closed */ }
-  g.__sitecheckerDb = undefined;
-}
-
-/** Force a checkpoint without closing — used before reading the file externally. */
-export function checkpoint(): void {
-  try { db().exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* ignore */ }
+  const p = new Pool({ connectionString, max: 5, idleTimeoutMillis: 10_000 });
+  g.__sitecheckerPool = p;
+  return p;
 }
 
 // ---------------------------------------------------------------------------
-// Small typed helpers. node:sqlite returns null-prototype objects, so results
-// are spread into plain objects before crossing into React.
+// Transactions
+//
+// A pooled connection may serve a different physical client per query, but
+// BEGIN/COMMIT must stay on one. AsyncLocalStorage carries the checked-out
+// client through the async call tree so nested all()/get()/run() calls inside
+// tx(fn) transparently reuse it instead of the pool.
 // ---------------------------------------------------------------------------
 
-export function all<T>(sql: string, ...params: unknown[]): T[] {
-  const rows = db().prepare(sql).all(...params as never[]) as unknown[];
-  return rows.map((r) => ({ ...(r as object) })) as T[];
+const txContext = new AsyncLocalStorage<PoolClient>();
+
+interface Queryable {
+  query(text: string, params?: unknown[]): Promise<{ rows: unknown[]; rowCount: number | null }>;
 }
 
-export function get<T>(sql: string, ...params: unknown[]): T | undefined {
-  const row = db().prepare(sql).get(...params as never[]);
-  return row ? ({ ...(row as object) } as T) : undefined;
+function client(): Queryable {
+  return txContext.getStore() ?? pool();
 }
 
-export function run(sql: string, ...params: unknown[]): { changes: number; lastInsertRowid: number } {
-  const r = db().prepare(sql).run(...params as never[]);
-  return { changes: Number(r.changes), lastInsertRowid: Number(r.lastInsertRowid) };
-}
+/** Run a unit of work inside a single transaction on one dedicated connection. */
+export async function tx<T>(fn: () => Promise<T> | T): Promise<T> {
+  const existing = txContext.getStore();
+  if (existing) return fn(); // already inside a transaction — reuse it, no nested BEGIN
 
-/** Wrap a unit of work in a transaction. */
-export function tx<T>(fn: () => T): T {
-  const conn = db();
-  conn.exec('BEGIN');
+  const c = await pool().connect();
   try {
-    const out = fn();
-    conn.exec('COMMIT');
+    await c.query('BEGIN');
+    const out = await txContext.run(c, fn);
+    await c.query('COMMIT');
     return out;
   } catch (err) {
-    conn.exec('ROLLBACK');
+    try { await c.query('ROLLBACK'); } catch { /* connection may already be dead */ }
     throw err;
+  } finally {
+    c.release();
   }
+}
+
+// ---------------------------------------------------------------------------
+// Migrations
+// ---------------------------------------------------------------------------
+
+let migrated: Promise<void> | null = null;
+
+/** Run every migration that has not yet been applied. Safe to call repeatedly. */
+export function ensureMigrated(): Promise<void> {
+  if (g.__sitecheckerMigrated) return g.__sitecheckerMigrated;
+  if (migrated) return migrated;
+
+  migrated = (async () => {
+    const p = pool();
+    await p.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER NOT NULL);
+      INSERT INTO schema_migrations (version)
+        SELECT 0 WHERE NOT EXISTS (SELECT 1 FROM schema_migrations);
+    `);
+    const { rows } = await p.query('SELECT version FROM schema_migrations LIMIT 1');
+    const current = (rows[0] as { version: number } | undefined)?.version ?? 0;
+
+    for (let i = current; i < MIGRATIONS.length; i++) {
+      const c = await p.connect();
+      try {
+        await c.query('BEGIN');
+        await c.query(MIGRATIONS[i]!);
+        await c.query('UPDATE schema_migrations SET version = $1', [i + 1]);
+        await c.query('COMMIT');
+      } catch (err) {
+        await c.query('ROLLBACK').catch(() => {});
+        throw new Error(`Migration ${i + 1} failed: ${(err as Error).message}`);
+      } finally {
+        c.release();
+      }
+    }
+  })();
+  g.__sitecheckerMigrated = migrated;
+  return migrated;
+}
+
+// ---------------------------------------------------------------------------
+// `?` -> `$1, $2, …` — every call site below keeps writing SQLite-style SQL.
+// ---------------------------------------------------------------------------
+
+function toPositional(sql: string): string {
+  let i = 0;
+  return sql.replace(/\?/g, () => '$' + (++i));
+}
+
+/** True when the statement already asks for a RETURNING clause. */
+const hasReturning = (sql: string): boolean => /\breturning\b/i.test(sql);
+
+// ---------------------------------------------------------------------------
+// Typed helpers. Every query call ensures migrations have run first, so a
+// cold serverless invocation is never queried against an unmigrated schema.
+// ---------------------------------------------------------------------------
+
+export async function all<T>(sql: string, ...params: unknown[]): Promise<T[]> {
+  await ensureMigrated();
+  const res = await client().query(toPositional(sql), params);
+  return res.rows as T[];
+}
+
+export async function get<T>(sql: string, ...params: unknown[]): Promise<T | undefined> {
+  await ensureMigrated();
+  const res = await client().query(toPositional(sql), params);
+  return (res.rows[0] as T | undefined) ?? undefined;
+}
+
+export interface RunResult { changes: number; lastInsertRowid: number }
+
+/**
+ * INSERT/UPDATE/DELETE. When the statement is an INSERT that already carries
+ * `RETURNING id`, the new row's id comes back as `lastInsertRowid` — the same
+ * shape `node:sqlite`'s `.run()` returned, so callers were not touched.
+ */
+export async function run(sql: string, ...params: unknown[]): Promise<RunResult> {
+  await ensureMigrated();
+  const positional = toPositional(sql);
+  const res = await client().query(positional, params);
+  const row = hasReturning(sql) ? (res.rows[0] as { id?: number } | undefined) : undefined;
+  return { changes: res.rowCount ?? 0, lastInsertRowid: row?.id ?? 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -130,44 +178,51 @@ export function toOrigin(url: string): string {
   return u.origin;
 }
 
-export function upsertSite(url: string, label?: string): Site {
+export async function upsertSite(url: string, label?: string): Promise<Site> {
   const origin = toOrigin(url);
-  const existing = get<Site>('SELECT * FROM sites WHERE origin = ?', origin);
+  const existing = await get<Site>('SELECT * FROM sites WHERE origin = ?', origin);
   if (existing) {
     if (label && label !== existing.label) {
-      run('UPDATE sites SET label = ? WHERE id = ?', label, existing.id);
+      await run('UPDATE sites SET label = ? WHERE id = ?', label, existing.id);
       return { ...existing, label };
     }
     return existing;
   }
-  const { lastInsertRowid } = run(
-    'INSERT INTO sites (origin, label, created_at) VALUES (?, ?, ?)',
+  const { lastInsertRowid } = await run(
+    'INSERT INTO sites (origin, label, created_at) VALUES (?, ?, ?) RETURNING id',
     origin, label ?? null, Date.now(),
   );
   return { id: lastInsertRowid, origin, label: label ?? null, created_at: Date.now() };
 }
 
-export function listSites(): Site[] {
+export async function listSites(): Promise<Site[]> {
   return all<Site>('SELECT * FROM sites ORDER BY origin');
 }
 
-export function getSite(id: number): Site | undefined {
+export async function getSite(id: number): Promise<Site | undefined> {
   return get<Site>('SELECT * FROM sites WHERE id = ?', id);
 }
 
-export function findSite(url: string): Site | undefined {
+export async function findSite(url: string): Promise<Site | undefined> {
   return get<Site>('SELECT * FROM sites WHERE origin = ?', toOrigin(url));
 }
 
-/** Rough on-disk size, shown in the UI so growth is visible. */
-export function dbStats(): { path: string; bytes: number; tables: Record<string, number> } {
-  // PRAGMA results come back keyed by the pragma name, not a positional alias.
-  const pageCount = get<Record<string, number>>('PRAGMA page_count')?.['page_count'] ?? 0;
-  const pageSize = get<Record<string, number>>('PRAGMA page_size')?.['page_size'] ?? 0;
+/** Approximate storage footprint, shown in the UI so growth is visible. */
+export async function dbStats(): Promise<{ path: string; bytes: number; tables: Record<string, number> }> {
+  await ensureMigrated();
+  const size = await get<{ bytes: string }>('SELECT pg_database_size(current_database()) AS bytes');
   const tables: Record<string, number> = {};
   for (const t of ['sites', 'monitor_checks', 'incidents', 'alerts', 'keywords',
     'rank_snapshots', 'backlinks', 'backlink_checks', 'crawls']) {
-    tables[t] = get<{ c: number }>(`SELECT COUNT(*) c FROM ${t}`)?.c ?? 0;
+    tables[t] = (await get<{ c: number }>(`SELECT COUNT(*)::int c FROM ${t}`))?.c ?? 0;
   }
-  return { path: DB_PATH, bytes: pageCount * pageSize, tables };
+  return { path: 'Postgres', bytes: Number(size?.bytes ?? 0), tables };
+}
+
+/** Closes the pool. Call at the end of one-shot scripts (cron entry points) so the process can exit. */
+export async function closePool(): Promise<void> {
+  if (g.__sitecheckerPool) {
+    await g.__sitecheckerPool.end();
+    g.__sitecheckerPool = undefined;
+  }
 }

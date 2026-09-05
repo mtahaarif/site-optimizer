@@ -11,10 +11,11 @@ import { getSnippetFromOffset, countLines } from '../src/core/utils/code.ts';
 import { locateFinding, hasLocator, locatableCheckIds } from '../src/core/checks/locate.ts';
 import { saveSnapshots, loadSnapshot, snapshotStats, deleteReport, saveReport } from '../src/crawler/store.ts';
 import { ALL_CHECKS } from '../src/core/checks/registry.ts';
-import { closeDb, run } from '../src/db/index.ts';
+import { closePool, run } from '../src/db/index.ts';
 import type { AuditReport } from '../src/crawler/audit.ts';
 
 let failures = 0;
+async function main() {
 const check = (label: string, actual: unknown, expected: unknown) => {
   const ok = JSON.stringify(actual) === JSON.stringify(expected);
   if (!ok) failures++;
@@ -134,9 +135,9 @@ console.log('\n--- snapshot storage roundtrip ---');
     counts: { htmlPages: 1, checksFailed: 0, checksPassed: 0 },
     severity: { blocker: 0, critical: 0, warning: 0 },
   } as unknown as AuditReport;
-  saveReport(stub);
+  await saveReport(stub);
 
-  const res = saveSnapshots(crawlId, [
+  const res = await saveSnapshots(crawlId, [
     { url: 'https://snapshot.test/', html: big, rendered: false },
     { url: 'https://snapshot.test/about', html: '<html><title>About</title></html>', rendered: true },
   ]);
@@ -145,24 +146,30 @@ console.log('\n--- snapshot storage roundtrip ---');
   console.log(`  INFO  ${res.rawBytes} raw -> ${res.gzipBytes} gzipped `
     + `(${(res.gzipBytes / res.rawBytes * 100).toFixed(1)}%)`);
 
-  const back = loadSnapshot(crawlId, 'https://snapshot.test/');
+  const back = await loadSnapshot(crawlId, 'https://snapshot.test/');
   check('roundtrip is byte-identical', back?.html === big, true);
-  check('rendered flag preserved', loadSnapshot(crawlId, 'https://snapshot.test/about')?.rendered, true);
+  check('rendered flag preserved', (await loadSnapshot(crawlId, 'https://snapshot.test/about'))?.rendered, true);
 
   // Lookup is by normalized URL, so trailing-slash form must not matter.
-  check('lookup ignores trailing slash', !!loadSnapshot(crawlId, 'https://snapshot.test'), true);
-  check('unknown URL returns null', loadSnapshot(crawlId, 'https://snapshot.test/nope'), null);
+  check('lookup ignores trailing slash', !!(await loadSnapshot(crawlId, 'https://snapshot.test')), true);
+  check('unknown URL returns null', await loadSnapshot(crawlId, 'https://snapshot.test/nope'), null);
 
-  check('stats count', snapshotStats(crawlId).count, 2);
+  check('stats count', (await snapshotStats(crawlId)).count, 2);
 
   // Deleting the crawl must take its snapshots with it.
-  deleteReport(crawlId);
-  check('snapshots dropped with the crawl', snapshotStats(crawlId).count, 0);
-  check('snapshot unreadable after delete', loadSnapshot(crawlId, 'https://snapshot.test/'), null);
+  await deleteReport(crawlId);
+  check('snapshots dropped with the crawl', (await snapshotStats(crawlId)).count, 0);
+  check('snapshot unreadable after delete', await loadSnapshot(crawlId, 'https://snapshot.test/'), null);
 
-  run('DELETE FROM sites WHERE origin = ?', 'https://snapshot.test');
+  await run('DELETE FROM sites WHERE origin = ?', 'https://snapshot.test');
 }
 
-closeDb();
 console.log(failures === 0 ? '\nAll code-view assertions passed.\n' : `\n${failures} assertion(s) FAILED.\n`);
 process.exitCode = failures === 0 ? 0 : 1;
+}
+
+try {
+  await main();
+} finally {
+  await closePool();
+}

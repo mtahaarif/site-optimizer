@@ -150,7 +150,7 @@ export async function sendAlert(alert: Alert): Promise<DeliveryResult[]> {
 
   const now = Date.now();
   for (const r of results) {
-    run(
+    await run(
       `INSERT INTO alerts (site_id, incident_id, kind, channel, sent_at, ok, subject, detail)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       alert.siteId ?? null, alert.incidentId ?? null, alert.kind, r.channel,

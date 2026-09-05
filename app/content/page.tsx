@@ -21,7 +21,7 @@ export default async function ContentPage({
 
   const configured = llmConfigured();
   const provider = activeProvider();
-  const projects = listProjects().filter((p) => p.crawlCount > 0);
+  const projects = (await listProjects()).filter((p) => p.crawlCount > 0);
 
   if (projects.length === 0) {
     return (
@@ -38,25 +38,27 @@ export default async function ContentPage({
   const selected = projects.find((p) => String(p.siteId) === site)
     ?? projects.slice().sort((a, b) => (b.latestAt ?? 0) - (a.latestAt ?? 0))[0]!;
 
-  const crawls = projectCrawls(selected.siteId);
+  const crawls = await projectCrawls(selected.siteId);
   const crawlId = crawls.length ? crawls[crawls.length - 1]!.id : null;
   const report = crawlId ? await loadReport(crawlId) : null;
 
   // Reports crawled before the alias-dedupe fix can list the same URL twice.
   const seen = new Set<string>();
-  const pages: PageRow[] = report && crawlId
+  const candidates = report && crawlId
     ? report.pages
       .filter((p) => p.isHtml && p.status === 200)
       .filter((p) => (seen.has(p.url) ? false : (seen.add(p.url), true)))
       .sort((a, b) => b.pageRank - a.pageRank)
       .slice(0, 60)
-      .map((p) => ({
+    : [];
+  const pages: PageRow[] = crawlId
+    ? await Promise.all(candidates.map(async (p) => ({
         url: p.url, title: p.title, words: p.wordCount, pageRank: p.pageRank,
-        hasSnapshot: hasSnapshot(crawlId, p.url),
-      }))
+        hasSnapshot: await hasSnapshot(crawlId, p.url),
+      })))
     : [];
 
-  const stored = crawlId ? gradesForCrawl(crawlId) : [];
+  const stored = crawlId ? await gradesForCrawl(crawlId) : [];
   const grades: Record<string, GradeRow> = {};
   for (const g of stored) {
     grades[g.url] = {

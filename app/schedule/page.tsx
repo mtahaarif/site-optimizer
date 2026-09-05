@@ -4,7 +4,7 @@ import { alertChannelsConfigured } from '@/src/alerts/send.ts';
 import { configuredProviders } from '@/src/ranks/providers.ts';
 import { gscConfigured } from '@/src/backlinks/gsc.ts';
 
-// Reads live data from SQLite, so there is no static shell to prerender.
+// Reads live data from Postgres, so there is no static shell to prerender.
 export const instant = false;
 
 export const metadata = {
@@ -36,7 +36,7 @@ const Pre = ({ children }: { children: string }) => (
 export default async function SchedulePage() {
   await connection();
 
-  const stats = dbStats();
+  const stats = await dbStats();
   const channels = alertChannelsConfigured();
   const providers = configuredProviders();
 
@@ -52,8 +52,8 @@ export default async function SchedulePage() {
         <h1 className="text-[30px] font-bold tracking-tight">Scheduling</h1>
         <p className="mt-2 max-w-[72ch] text-[14px] leading-relaxed text-muted">
           Nothing runs on its own. The scripts are one-shot: a scheduler invokes them, they write
-          to SQLite and exit. That is what keeps the whole tool free — there is no daemon to host,
-          so there is nothing to pay a VPS for.
+          to Postgres and exit. That is what keeps the whole tool free — there is no daemon to
+          host, so there is nothing to pay a VPS for beyond the database itself.
         </p>
       </div>
 
@@ -84,25 +84,26 @@ export default async function SchedulePage() {
 
       <Block title="Option A — your machine (cron / Task Scheduler)">
         <p className="mb-3 max-w-[72ch] text-[13px] leading-relaxed text-muted">
-          Zero setup and completely private, but it only runs while the machine is on and awake.
-          Fine for rank and backlink checks, which are weekly and daily. Not adequate on its own
-          for &ldquo;24/7&rdquo; uptime monitoring — a laptop that sleeps stops monitoring.
+          No extra hosting, but it only runs while the machine is on and awake. Fine for rank and
+          backlink checks, which are weekly and daily. Not adequate on its own for &ldquo;24/7&rdquo;
+          uptime monitoring — a laptop that sleeps stops monitoring. Every script writes straight to
+          the same Postgres database the dashboard reads, so results appear immediately either way.
         </p>
 
         <h3 className="mb-2 mt-4 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-accent">
           macOS / Linux — crontab -e
         </h3>
         <Pre>{`# every 15 minutes: uptime
-*/15 * * * * cd /path/to/SiteChecker && /usr/local/bin/node scripts/monitor.ts >> .data/monitor.log 2>&1
+*/15 * * * * cd /path/to/SiteChecker && POSTGRES_URL="..." /usr/local/bin/node scripts/monitor.ts >> monitor.log 2>&1
 
 # daily 04:00: backlinks
-0 4 * * * cd /path/to/SiteChecker && /usr/local/bin/node scripts/backlinks.ts >> .data/backlinks.log 2>&1
+0 4 * * * cd /path/to/SiteChecker && POSTGRES_URL="..." /usr/local/bin/node scripts/backlinks.ts >> backlinks.log 2>&1
 
 # Mondays 06:00: rankings (weekly, to stay inside the free SERP tier)
-0 6 * * 1 cd /path/to/SiteChecker && /usr/local/bin/node scripts/ranks.ts >> .data/ranks.log 2>&1`}</Pre>
+0 6 * * 1 cd /path/to/SiteChecker && POSTGRES_URL="..." /usr/local/bin/node scripts/ranks.ts >> ranks.log 2>&1`}</Pre>
         <p className="mt-2 text-[12.5px] text-muted">
           cron runs with a minimal environment and will not read <code className="font-mono">.env.local</code>.
-          Either export the variables in the crontab or source them in a wrapper script.
+          Either export the variables in the crontab (as above) or source them in a wrapper script.
         </p>
 
         <h3 className="mb-2 mt-5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-accent">
@@ -117,17 +118,18 @@ schtasks /create /tn "SiteChecker Backlinks" /sc daily /st 04:00 ^
 schtasks /create /tn "SiteChecker Ranks" /sc weekly /d MON /st 06:00 ^
   /tr "node D:\\Work\\SiteChecker\\scripts\\ranks.ts"`}</Pre>
         <p className="mt-2 text-[12.5px] text-muted">
-          Set &ldquo;Start in&rdquo; to the project directory in Task Scheduler, or the relative
-          database path will resolve somewhere unexpected.
+          Set the environment variables under the task&rsquo;s Action, or wrap the command in a
+          <code className="mx-1 font-mono">.cmd</code> file that sets them first — Task Scheduler
+          does not read <code className="font-mono">.env.local</code> either.
         </p>
       </Block>
 
       <Block title="Option B — GitHub Actions (genuinely 24/7, still free)">
         <p className="mb-3 max-w-[72ch] text-[13px] leading-relaxed text-muted">
           This is the honest answer to round-the-clock monitoring without a VPS. The runner is
-          stateless, so the SQLite file is committed back to the repository after each run — that
-          is what turns a throwaway container into persistent history. Public repos get unlimited
-          minutes; private repos get 2,000/month and a monitoring run costs about 15 seconds.
+          stateless, but that no longer matters — every script writes straight to Postgres, so
+          there is nothing to persist locally between runs. Public repos get unlimited minutes;
+          private repos get 2,000/month and a monitoring run costs about 15 seconds.
         </p>
         <p className="mb-3 max-w-[72ch] text-[13px] leading-relaxed text-muted">
           Two limits to know: scheduled workflows are <strong>throttled under load</strong>, so a
@@ -139,25 +141,23 @@ schtasks /create /tn "SiteChecker Ranks" /sc weekly /d MON /st 06:00 ^
 .github/workflows/backlinks.yml   daily 04:00 UTC
 .github/workflows/ranks.yml       Mondays 06:00 UTC`}</Pre>
         <p className="mt-3 text-[13px] text-muted">
-          Add credentials under <strong>Settings → Secrets and variables → Actions</strong>:
+          Add credentials under <strong>Settings → Secrets and variables → Actions</strong> — the
+          same <code className="font-mono">POSTGRES_URL</code> your app uses, plus whatever else
+          each script needs:
         </p>
-        <Pre>{`SENDGRID_API_KEY              ALERT_EMAIL_TO
+        <Pre>{`POSTGRES_URL
+SENDGRID_API_KEY              ALERT_EMAIL_TO
 ALERT_EMAIL_FROM              ALERT_WEBHOOK_URL
 SERPAPI_KEY                   VALUESERP_KEY
 DATAFORSEO_LOGIN              DATAFORSEO_PASSWORD
 GOOGLE_SERVICE_ACCOUNT_JSON   GSC_SITE_URL`}</Pre>
-        <p className="mt-2 text-[12.5px] text-muted">
-          The workflows use <code className="font-mono">git add -f</code> because{' '}
-          <code className="font-mono">.data/</code> is gitignored for local use. If your repo is
-          public, remember the committed database is public too.
-        </p>
       </Block>
 
       <Block title="Local environment">
         <p className="mb-3 max-w-[72ch] text-[13px] leading-relaxed text-muted">
           Copy <code className="font-mono">.env.example</code> to{' '}
-          <code className="font-mono">.env.local</code>. Secrets never go in the database — only
-          in the environment — so the SQLite file stays safe to commit or copy.
+          <code className="font-mono">.env.local</code> and set <code className="font-mono">POSTGRES_URL</code>.
+          Secrets never go in the database — only in the environment.
         </p>
         <Pre>{`cp .env.example .env.local
 

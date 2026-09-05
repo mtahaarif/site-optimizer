@@ -6,7 +6,7 @@ type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_req: Request, { params }: Ctx) {
   const { id } = await params;
-  const job = getJob(id);
+  const job = await getJob(id);
 
   // A live job reports progress; a finished one may only exist on disk.
   if (job && job.status !== 'done') {

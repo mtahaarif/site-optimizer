@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   const url = String(body['url'] ?? '').trim();
   if (!url) return Response.json({ error: 'A website address is required.' }, { status: 400 });
   try {
-    const site = createProject(url);
+    const site = await createProject(url);
     return Response.json({ id: site.id, origin: site.origin });
   } catch {
     return Response.json({ error: 'That doesn’t look like a valid website address.' }, { status: 400 });
