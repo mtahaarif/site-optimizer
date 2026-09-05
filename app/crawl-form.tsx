@@ -6,7 +6,12 @@ import { useState } from 'react';
 export function CrawlForm({ initialUrl = '', lockUrl = false }: { initialUrl?: string; lockUrl?: boolean } = {}) {
   const router = useRouter();
   const [url, setUrl] = useState(initialUrl);
-  const [maxPages, setMaxPages] = useState(100);
+  // Sized to finish inside one serverless invocation. A hosted crawl gets
+  // whatever the plan's maxDuration allows (60s on Vercel Hobby) and is killed
+  // at the ceiling with no way to resume, so the default is what reliably
+  // completes rather than the most it could theoretically fetch. Self-hosted
+  // runs have no such ceiling — raise it freely there.
+  const [maxPages, setMaxPages] = useState(40);
   const [maxDepth, setMaxDepth] = useState(10);
   const [concurrency, setConcurrency] = useState(6);
   const [checkAssets, setCheckAssets] = useState(true);
@@ -98,6 +103,10 @@ export function CrawlForm({ initialUrl = '', lockUrl = false }: { initialUrl?: s
             <label className={label} htmlFor="maxPages">Max pages</label>
             <input id="maxPages" type="number" min={1} max={5000} value={maxPages}
               onChange={(e) => setMaxPages(Number(e.target.value))} className={field + ' mt-1.5'} />
+            <p className="mt-1 text-[11px] leading-snug text-muted">
+              Hosted crawls have to finish within one function invocation (60s on
+              Vercel Hobby). Higher is fine when self-hosted.
+            </p>
           </div>
           <div>
             <label className={label} htmlFor="maxDepth">Max depth</label>

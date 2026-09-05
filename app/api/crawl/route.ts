@@ -6,8 +6,21 @@ import {
   type PageSnapshot,
 } from '@/src/crawler/store.ts';
 
-// A large crawl outlives the default handler budget.
-export const maxDuration = 900;
+/**
+ * A crawl outlives the default handler budget, so ask for the longest run
+ * Vercel will grant on every plan.
+ *
+ * 60 is not a guess — it is the Hobby ceiling. Vercel validates this value
+ * *after* the build, while deploying the output, and rejects the whole
+ * deployment if it exceeds what the plan allows (900, the previous value here,
+ * is Enterprise-only). A build that compiles perfectly and then fails at
+ * "Deploying outputs" is almost always this.
+ *
+ * Raise it if your plan allows more — 300 on Pro, 800 with Fluid compute, 900
+ * on Enterprise. It must stay a literal: Next reads it statically, so
+ * `Number(process.env…)` here would not work.
+ */
+export const maxDuration = 60;
 
 export async function GET() {
   return NextResponse.json({ reports: await listReports() });

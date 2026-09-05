@@ -1178,19 +1178,44 @@ registered to outlive it.
 
 ### What is still a real constraint on Vercel
 
-- **Function duration.** `export const maxDuration = 900` is set on the crawl
-  route, but Vercel enforces its own ceiling per plan (as low as 10s on Hobby;
-  higher with Fluid compute or Pro/Enterprise). A crawl large enough to exceed
-  whatever your plan actually allows will be killed mid-run, and there is
-  currently no queue or resumable-worker path to pick it back up. Size
-  `maxPages` to what your plan's duration limit can plausibly finish.
+- **Function duration caps how big a hosted crawl can be.** The crawl route
+  sets `export const maxDuration = 60` — the Hobby ceiling, and a value every
+  plan accepts. **This number is validated by Vercel after the build, while
+  deploying the output, and a value above your plan's limit fails the whole
+  deployment** even though `next build` succeeded (see below). Raise it if your
+  plan allows: 300 on Pro, 800 with Fluid compute, 900 on Enterprise. It has to
+  stay a literal — Next reads it statically.
+
+  Whatever it is set to is a hard wall: a crawl that runs past it is killed
+  mid-run and there is no queue to resume it. The dashboard's **Max pages**
+  default (40) is chosen to finish comfortably inside 60s, including the
+  serial PageSpeed calls, which are the slowest part. Self-hosted runs have no
+  such ceiling.
 - **JavaScript rendering needs a real Chromium binary.** Playwright's browser
   pool (see [JavaScript rendering](#javascript-rendering)) has nothing to
-  resolve to on a standard Vercel function. `--render-js` is a local/self-hosted
-  feature only, not something the deployed dashboard can offer.
+  resolve to on a standard Vercel function, so `--render-js` is a
+  local/self-hosted feature only. `playwright-core` is explicitly excluded from
+  the deployed bundle via `outputFileTracingExcludes` in `next.config.ts` —
+  otherwise output tracing follows the dynamic import and packs ~14 MB of
+  unusable browser tooling into the crawl function, against a 250 MB ceiling.
 - **PageSpeed Insights is now read from and written to Postgres**, not a local
   disk cache — no action needed, just noted because it is a behavioural change
   from the original design.
+
+### A build that succeeds and then fails at "Deploying outputs"
+
+Worth calling out separately, because the log is misleading: `next build`
+completing and printing the full route table does **not** mean the deployment
+will land. Vercel validates the built output against your plan afterwards, and
+the two things that fail there are:
+
+1. **`maxDuration` above the plan ceiling** — the most common, and what the
+   value above exists to avoid.
+2. **A function over 250 MB unzipped** — which is why Playwright is excluded
+   from tracing rather than left to be bundled and never used.
+
+Neither produces an error during the build itself, so the build log looks
+entirely healthy right up to the point the deploy stops.
 
 ## Uptime monitoring and alerts
 
