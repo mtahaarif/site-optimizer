@@ -5,6 +5,8 @@ import { gradesForCrawl, llmConfigured, activeProvider } from '@/src/core/conten
 import { ScoreDial } from '../ui.tsx';
 import { Section, MeterBar, SitePicker } from '../panel.tsx';
 import { ContentGrader, type PageRow, type GradeRow } from './grader.tsx';
+import { LocationOptimiser, type CellRow, type LocationRow } from './locations.tsx';
+import { listLocations, locationContentForSite } from '@/src/core/locations/store.ts';
 import { pageMeta } from '../meta.ts';
 
 export const instant = false;
@@ -58,6 +60,15 @@ export default async function ContentPage({
         hasSnapshot: await hasSnapshot(crawlId, p.url),
       })))
     : [];
+
+  const locations: LocationRow[] = (await listLocations(selected.siteId))
+    .map((l) => ({ id: l.id, label: l.label }));
+  const cells: CellRow[] = (await locationContentForSite(selected.siteId))
+    .map((c) => ({
+      locationId: c.locationId, url: c.url, coverage: c.coverage, signals: c.signals,
+      verdict: c.verdict, recommendations: c.recommendations, draft: c.draft,
+      analysedAt: c.analysedAt, generatedAt: c.generatedAt,
+    }));
 
   const stored = crawlId ? await gradesForCrawl(crawlId) : [];
   const grades: Record<string, GradeRow> = {};
@@ -156,6 +167,30 @@ ANTHROPIC_API_KEY=sk-…  # strongest judgement (paid)`}
           ) : (
             <ContentGrader crawlId={crawlId!} pages={pages} grades={grades} configured={configured} />
           )}
+        </div>
+      </Section>
+
+      {/* ---- locations ---- */}
+      <Section
+        title="Rank in more than one place"
+        question="Add the places you serve, see which pages already read as serving them, and rewrite the ones that don't — with AI, or with a prompt you copy and run yourself."
+        status={locations.length ? `${locations.length} ${locations.length === 1 ? 'location' : 'locations'}` : 'No locations yet'}
+        tone={locations.length ? 'good' : 'neutral'}
+      >
+        <div className="px-6 py-5">
+          <LocationOptimiser
+            siteId={selected.siteId}
+            crawlId={crawlId}
+            pages={pages.map((p) => ({ url: p.url, title: p.title, hasSnapshot: p.hasSnapshot }))}
+            locations={locations}
+            cells={cells}
+            aiConfigured={configured}
+          />
+          <p className="mt-5 text-[12.5px] leading-relaxed text-muted">
+            The same locations are used on{' '}
+            <Link href="/ranks" className="text-accent hover:underline">search rankings</Link> — check
+            where you actually place in each city, then come back and fix the pages that fall short.
+          </p>
         </div>
       </Section>
 

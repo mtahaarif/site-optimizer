@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { listProjects, projectCrawls, loadReport } from '@/src/crawler/store.ts';
 import { analyzeAeo, generateLlmsTxt } from '@/src/core/aeo/analyze.ts';
 import { gradesForCrawl } from '@/src/core/content/grade.ts';
+import { listLocations, locationContentForSite } from '@/src/core/locations/store.ts';
 import { ScoreDial, shortUrl } from '../ui.tsx';
 import { Section, MeterBar, ActionRow, SitePicker } from '../panel.tsx';
 import { LlmsFile } from './llms-file.tsx';
@@ -58,6 +59,29 @@ export default async function AiVisibilityPage({
 
   const origin = report.origin.replace(/\/$/, '');
   const host = origin.replace(/^https?:\/\//, '');
+
+  // Answer engines are asked local questions constantly ("best X near me"), and
+  // they answer from pages that actually name the place. So the location
+  // coverage recorded on the content page belongs here too — as a summary per
+  // place, not another matrix.
+  const locations = await listLocations(selected.siteId);
+  const locationCells = locations.length ? await locationContentForSite(selected.siteId) : [];
+  const locationStats = locations.map((l) => {
+    const cells = locationCells.filter((c) => c.locationId === l.id);
+    return {
+      id: l.id,
+      label: l.label,
+      checked: cells.length,
+      average: cells.length
+        ? Math.round(cells.reduce((s, c) => s + c.coverage, 0) / cells.length)
+        : null,
+      weak: cells.filter((c) => c.coverage < 35).length,
+    };
+  });
+  const locationsChecked = locationStats.filter((s) => s.checked > 0);
+  const locationAverage = locationsChecked.length
+    ? Math.round(locationsChecked.reduce((s, l) => s + (l.average ?? 0), 0) / locationsChecked.length)
+    : null;
   const [robotsText, llmsTxt] = await Promise.all([
     fetchText(origin + '/robots.txt'),
     fetchText(origin + '/llms.txt'),
@@ -266,6 +290,58 @@ export default async function AiVisibilityPage({
             className="shrink-0 border border-ink bg-ink px-5 py-2 text-[13px] font-medium text-ground no-underline transition-opacity hover:opacity-90">
             Open content quality →
           </Link>
+        </div>
+      </Section>
+
+      {/* ---- locations ---- */}
+      <Section
+        title="Are you visible in the places you serve?"
+        question="Answer engines field local questions constantly, and they answer from pages that actually name the place."
+        status={locationAverage !== null ? `Average ${locationAverage}/100`
+          : locations.length ? 'Not checked yet' : 'No locations yet'}
+        tone={locationAverage === null ? 'neutral' : locationAverage >= 70 ? 'good' : 'bad'}>
+        <div className="flex flex-col gap-4 px-6 py-5">
+          {locations.length === 0 ? (
+            <p className="max-w-[76ch] text-[13px] leading-relaxed text-muted">
+              If your business serves particular towns or cities, add them once on the content page.
+              Every page is then checked against every place, and you can rewrite the ones that fall
+              short — the same list is used for{' '}
+              <Link href="/ranks" className="text-accent hover:underline">search rankings</Link>.
+            </p>
+          ) : (
+            <>
+              <ul className="flex flex-col gap-2">
+                {locationStats.map((l) => (
+                  <li key={l.id} className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line/60 pb-2">
+                    <span className="text-[13.5px] text-ink">{l.label}</span>
+                    <span className="text-[12.5px] text-muted">
+                      {l.average === null ? 'not checked yet' : (
+                        <>
+                          <span className="tnum font-mono" style={{
+                            color: l.average >= 70 ? 'rgb(var(--opportunity))'
+                              : l.average >= 35 ? 'rgb(var(--warning))' : 'rgb(var(--blocker))',
+                          }}>{l.average}/100</span>
+                          {' '}across {l.checked} {l.checked === 1 ? 'page' : 'pages'}
+                          {l.weak > 0 && <> · {l.weak} barely {l.weak === 1 ? 'mentions' : 'mention'} it</>}
+                        </>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="max-w-[76ch] text-[12.5px] leading-relaxed text-muted">
+                This counts where each place is named — title, heading, body, URL, local schema. It
+                does not mean the pages are good: the same copy repeated per city is a doorway page,
+                which search engines penalise.
+              </p>
+            </>
+          )}
+          <div>
+            <Link href={`/content?site=${selected.siteId}`}
+              className="inline-block border border-ink bg-ink px-5 py-2 text-[13px] font-medium text-ground no-underline transition-opacity hover:opacity-90">
+              {locations.length === 0 ? 'Add your locations →' : 'Open location content →'}
+            </Link>
+          </div>
         </div>
       </Section>
 

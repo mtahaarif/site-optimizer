@@ -307,4 +307,50 @@ export const MIGRATIONS: string[] = [
     finished_at BIGINT
   );
   `,
+  // ---- 11: target locations and per-location content work ------------------
+  `
+  -- The places a site wants to rank in.
+  --
+  -- Shared rather than owned by one feature: rank tracking checks positions in
+  -- a location, and content optimisation writes for it. Keeping one list means
+  -- adding "Austin" once puts it in front of both, instead of the same place
+  -- being typed into two features that then disagree about its spelling.
+  CREATE TABLE IF NOT EXISTS locations (
+    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    site_id    INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+    label      TEXT    NOT NULL,          -- what the user typed, e.g. "Austin, Texas"
+    city       TEXT,
+    region     TEXT,                      -- state / province
+    country    TEXT,                      -- ISO-3166 alpha-2
+    active     INTEGER NOT NULL DEFAULT 1,
+    created_at BIGINT  NOT NULL,
+    UNIQUE(site_id, label)
+  );
+  CREATE INDEX IF NOT EXISTS idx_location_site ON locations(site_id, active);
+
+  -- One row per (page, location) the optimiser has looked at.
+  --
+  -- Coverage is deterministic and free — does the page name the place, in the
+  -- title, the headings, the body, structured data. The verdict and the draft
+  -- come from a model and cost money, so they are stored: re-opening a page
+  -- must never re-spend, the same rule the content grader follows.
+  CREATE TABLE IF NOT EXISTS location_content (
+    id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    site_id       INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+    location_id   INTEGER NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+    url           TEXT    NOT NULL,
+    url_key       TEXT    NOT NULL,       -- normalized, so lookups ignore trailing slashes
+    crawl_id      TEXT,                   -- the audit the page text came from
+    coverage      INTEGER NOT NULL DEFAULT 0,  -- 0-100, deterministic
+    signals       TEXT    NOT NULL DEFAULT '{}', -- JSON: where the place is mentioned
+    verdict       TEXT,                   -- model's one-line judgement
+    recommendations TEXT,                 -- JSON array of {change, why}
+    draft         TEXT,                   -- JSON: generated title/description/h1/sections
+    model         TEXT,
+    analysed_at   BIGINT,
+    generated_at  BIGINT,
+    UNIQUE(location_id, url_key)
+  );
+  CREATE INDEX IF NOT EXISTS idx_loccontent_site ON location_content(site_id, location_id);
+  `,
 ];

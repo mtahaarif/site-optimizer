@@ -41,7 +41,7 @@ function posColor(p: number | null): string {
   return 'rgb(var(--ink))';
 }
 
-export function RankCheckForm() {
+export function RankCheckForm({ savedLocations = [] }: { savedLocations?: string[] }) {
   const router = useRouter();
   const [scope, setScope] = useState<Scope>('web');
   const [keyword, setKeyword] = useState('');
@@ -182,6 +182,19 @@ export function RankCheckForm() {
               value={city} onChange={(e) => setCity(e.target.value)} disabled={busy} />
           </div>
         </div>
+
+        {savedLocations.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[12px] text-muted">Your locations:</span>
+            {savedLocations.map((l) => (
+              <button key={l} type="button" onClick={() => setCity(l)} disabled={busy}
+                className={'border px-2.5 py-1 text-[12px] transition-colors disabled:opacity-40 '
+                  + (city === l ? 'border-ink bg-ink text-ground' : 'border-line text-muted hover:border-ink hover:text-ink')}>
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-4">
           <button type="submit" disabled={busy || !keyword.trim() || !domain.trim() || (scope === 'web' && engines.size === 0)}

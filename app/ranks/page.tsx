@@ -1,5 +1,7 @@
 import { connection } from 'next/server';
+import Link from 'next/link';
 import { keywordsWithRanks, allUsage } from '@/src/ranks/track.ts';
+import { allLocationLabels } from '@/src/core/locations/store.ts';
 import { configuredProviders } from '@/src/ranks/providers.ts';
 import { Stat, Bar } from '../ui.tsx';
 import { RankCheckForm } from './check-form.tsx';
@@ -41,6 +43,7 @@ export default async function RanksPage() {
   const rows = await keywordsWithRanks();
   const providers = configuredProviders();
   const usage = await allUsage();
+  const savedLocations = await allLocationLabels();
 
   const ranked = rows.filter((r) => r.position !== null);
   const top10 = ranked.filter((r) => (r.position ?? 999) <= 10).length;
@@ -57,9 +60,17 @@ export default async function RanksPage() {
           phrase, in any city, on computer or phone. Save the phrases that matter and watch how
           your position changes over time.
         </p>
+        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted">
+          {savedLocations.length > 0
+            ? <>The {savedLocations.length} {savedLocations.length === 1 ? 'location you have' : 'locations you have'} saved
+              are one click away below. When a city ranks badly, go and{' '}
+              <Link href="/content" className="text-accent hover:underline">fix the pages for it</Link>.</>
+            : <>Targeting several places? <Link href="/content" className="text-accent hover:underline">Add
+              your locations</Link> once and they show up here as well as on the content page.</>}
+        </p>
       </div>
 
-      <RankCheckForm />
+      <RankCheckForm savedLocations={savedLocations} />
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Stat label="Saved phrases" value={rows.length} />
