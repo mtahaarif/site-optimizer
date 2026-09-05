@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { loadSnapshot, snapshotStats } from '@/src/crawler/store.ts';
 import { locateFinding } from '@/src/core/checks/locate.ts';
-import { getSnippetFromOffset } from '@/src/core/utils/code.ts';
+import { getSnippetFromOffset, looksMinified, prettyPrintHtml } from '@/src/core/utils/code.ts';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -59,7 +59,18 @@ export async function GET(req: Request, { params }: Ctx) {
     });
   }
 
-  const snippet = getSnippetFromOffset(snapshot.html, location.offset, contextLines, location.length);
+  // Production HTML is minified, so the whole document is one line and the
+  // surrounding source is unreadable. Re-break it onto one line per tag and
+  // move the offset with it, so the highlight still lands on the finding.
+  const minified = looksMinified(snapshot.html);
+  const source = minified ? prettyPrintHtml(snapshot.html, location.offset) : null;
+
+  const snippet = getSnippetFromOffset(
+    source ? source.text : snapshot.html,
+    source ? source.offset : location.offset,
+    contextLines,
+    location.length,
+  );
 
   return NextResponse.json({
     url: snapshot.url,
@@ -69,6 +80,10 @@ export async function GET(req: Request, { params }: Ctx) {
     located: true,
     label: location.label,
     offset: location.offset,
+    // The served HTML was minified and has been re-broken for display, so the
+    // line numbers are this view's, not the original response's. The UI says
+    // so rather than implying a line number that does not exist upstream.
+    reformatted: minified,
     snippet,
   });
 }

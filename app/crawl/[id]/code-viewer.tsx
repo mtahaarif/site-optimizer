@@ -12,6 +12,8 @@ interface SnapshotResponse {
   reason?: string;
   label?: string;
   offset?: number;
+  /** the served HTML was minified and re-broken for display */
+  reformatted?: boolean;
   snippet: CodeSnippet | null;
   error?: string;
 }
@@ -125,6 +127,14 @@ export function CodeViewer({
         )}
         {data?.label && (
           <span className="font-mono text-[11px] text-muted">· matched {data.label}</span>
+        )}
+        {data?.reformatted && (
+          <span
+            className="font-mono text-[10.5px] text-muted"
+            title="The page is served minified, on a single line. It has been re-broken one tag per line so it can be read — these line numbers are this view's, not the original response's."
+          >
+            · reformatted
+          </span>
         )}
         {data && (
           <span className="font-mono text-[10.5px] text-muted">

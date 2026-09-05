@@ -98,3 +98,122 @@ export function countLines(html: string): number {
   for (let i = html.indexOf('\n'); i !== -1; i = html.indexOf('\n', i + 1)) n++;
   return n;
 }
+
+// ---------------------------------------------------------------------------
+// Minified documents
+// ---------------------------------------------------------------------------
+
+/**
+ * Does this document have essentially no line breaks?
+ *
+ * Production HTML usually does not. Next.js, and every other framework that
+ * minifies its output, emits the entire document on one line — so "show me the
+ * source around this finding" produced one 400 KB line, truncated to 400
+ * characters, with the offending tag somewhere off the right-hand edge.
+ *
+ * Counted rather than split: splitting a 400 KB string to learn one number
+ * allocates thousands of substrings, and the loop exits as soon as the
+ * document is dense enough to disprove the question.
+ */
+export function looksMinified(html: string): boolean {
+  if (html.length < 2000) return false;
+  const enough = html.length / 200; // roughly one break per 200 chars
+  let newlines = 0;
+  for (let i = html.indexOf('\n'); i !== -1; i = html.indexOf('\n', i + 1)) {
+    if (++newlines > enough) return false;
+  }
+  return true;
+}
+
+/** Elements whose contents are raw text and must not be reformatted. */
+const RAW_TEXT = ['script', 'style', 'pre', 'textarea'];
+
+/** Void elements never increase indent depth. */
+const VOID_TAGS = new Set([
+  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+  'link', 'meta', 'param', 'source', 'track', 'wbr',
+]);
+
+const INDENT = '  ';
+const MAX_DEPTH = 12; // stop indenting past this, or deep trees walk off-screen
+
+/**
+ * Re-break minified HTML onto one line per tag, and carry an offset with it.
+ *
+ * Returns the offset's new position so the caller can still point at the exact
+ * finding: reformatting the source is only useful if the highlight follows it.
+ *
+ * Tags are emitted whole, so a match that covers a single tag — which is what
+ * every locator produces — stays contiguous on one line and can still be
+ * underlined. Script and style bodies are passed through untouched: they are
+ * not markup, and breaking a JSON payload on angle brackets would produce
+ * nonsense.
+ */
+export function prettyPrintHtml(html: string, offset: number): { text: string; offset: number } {
+  const out: string[] = [];
+  let outLen = 0;
+  let mapped = -1;
+  let depth = 0;
+  let i = 0;
+
+  /** Append a segment, mapping `offset` if it falls inside this one. */
+  const push = (text: string, origStart: number, origEnd: number): void => {
+    if (mapped === -1 && offset >= origStart && offset < origEnd) {
+      mapped = outLen + (offset - origStart);
+    }
+    out.push(text);
+    outLen += text.length;
+  };
+
+  const newline = (): void => {
+    if (outLen === 0) return;
+    const pad = '\n' + INDENT.repeat(Math.min(depth, MAX_DEPTH));
+    out.push(pad);
+    outLen += pad.length;
+  };
+
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+
+    // Trailing text after the last tag.
+    if (lt === -1) {
+      const text = html.slice(i);
+      if (text.trim()) { newline(); push(text.trim(), i, html.length); }
+      break;
+    }
+
+    // Text between tags.
+    if (lt > i) {
+      const raw = html.slice(i, lt);
+      if (raw.trim()) { newline(); push(raw.trim(), i, lt); }
+      else if (mapped === -1 && offset >= i && offset < lt) mapped = outLen;
+    }
+
+    const gt = html.indexOf('>', lt);
+    if (gt === -1) { newline(); push(html.slice(lt), lt, html.length); break; }
+
+    const tag = html.slice(lt, gt + 1);
+    const nameMatch = tag.match(/^<\/?\s*([a-zA-Z][a-zA-Z0-9-]*)/);
+    const name = (nameMatch?.[1] ?? '').toLowerCase();
+    const isClose = tag.startsWith('</');
+    const selfClosing = tag.endsWith('/>') || VOID_TAGS.has(name);
+
+    if (isClose) depth = Math.max(0, depth - 1);
+    newline();
+    push(tag, lt, gt + 1);
+    i = gt + 1;
+
+    // Raw-text elements: copy through to the matching close tag verbatim.
+    if (!isClose && !selfClosing && RAW_TEXT.includes(name)) {
+      const closeIdx = html.toLowerCase().indexOf('</' + name, i);
+      const end = closeIdx === -1 ? html.length : closeIdx;
+      if (end > i) push(html.slice(i, end), i, end);
+      i = end;
+      continue;
+    }
+
+    if (!isClose && !selfClosing) depth++;
+  }
+
+  return { text: out.join(''), offset: mapped === -1 ? 0 : mapped };
+}
