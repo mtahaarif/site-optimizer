@@ -1,0 +1,340 @@
+Site Audit Issues Release History
+Website SEO checker & Audit tool
+Platform
+Core tools
+Website Crawler
+Crawl the website for technical issues
+Website Monitoring
+Track website changes critical for SEO
+Rank Tracker
+Track website positions by keywords
+GSC Dashboard
+Get GSC data without limits
+SEO Dashboard
+One place for all SEO metrics
+AI Visibility Tracker
+Track AI traffic, visibility, and rankings
+Core tools
+Website Crawler
+Website Monitoring
+Rank Tracker
+GSC Dashboard
+SEO Dashboard
+AI Visibility Tracker
+Pay as you go
+Website Migration Checker
+Bulk URL Checker
+One-Time Site Audit
+Top features
+White Label
+SEO Alerts
+Free tools
+SEO Checker
+SEO Chrome Extension
+Case Studies
+Pricing
+Resources
+Product Updates
+Features Roadmap
+Free SEO Tools
+Blog
+Help Center
+Educational Partnership
+Affiliate Program
+Latest Post
+Marketing
+Web Hosting
+Interview
+Go to app
+Start for Free
+Log in
+Start for Free
+Blog
+Site Audit Issues
+Site Audit Issues Release History
+The History of Adding New Issues to Site Audit
+Ivan Palii
+Oct 6, 2022
+Free Complete
+Site Audit
+Access a full website audit with over 300 technical insights.
+Something went wrong. Please, try again later.
+Check my website
+Trusted by
+Free Website SEO Checker & Audit Tool
+Scan the site for 300+ technical issues
+Monitor your site health 24/7
+Track website rankings in any geo
+Get started
+Free SEO Chrome Extension
+Automate your on-page SEO routine
+On Page SEO
+Content optimization
+Links
+GSC Insights
+Add to Chrome
+4.5
+182K
+New issues added on August, 15, 2023
+Security
+Type:
+Notice
+Page requires CAPTCHA authentication method
+New issues added on June, 12, 2023
+Security
+Type:
+Critical
+SSL certificate is invalid
+Links
+Type:
+Warning
+Broken jump link
+New issues added on January, 11, 2023
+Search traffic
+Type:
+Critical
+GSC clicks dropped more than 25% for the last 7 days
+GA clicks dropped more than 25% for the last 7 days
+New issues added on December, 7, 2022
+Duplicate content
+Type:
+Critical
+Technically duplicate URLs
+New issues added on December, 1, 2022
+Code validation
+Type:
+Critical
+PHP fatal error
+Google Tag Manager code in <body>
+Content relevance
+Type:
+Critical
+Lorem Ipsum content on the live site
+Homepage with the title tag of “Home”
+Type:
+Warning
+Author box with “Admin”
+Links
+Type:
+Opportunity
+Links in the footer with a no-follow attribute
+Type:
+Notice
+Empty links “#”
+New issues added on November, 7, 2022
+Search traffic
+Type:
+Opportunity
+Connect Google Analytics and Search Console properties to Sitechecker
+New issues added on October, 26, 2022
+Indexability
+Type:
+Critical
+Page has disallowed JavaScript files
+Page has disallowed images
+Page has disallowed CSS files
+Page contains a form with a GET method
+Page has content before <!doctype html>
+Type:
+Warning
+Base URL malformed
+or empty
+Type:
+Notice
+Page has content-type other than text/html
+XML Sitemaps
+Type:
+Critical
+Noindex URL in XML sitemaps
+Disallowed URL in XML sitemaps
+Canonicalized URL in XML sitemaps
+4xx client errors in XML sitemaps
+5xx server errors in XML sitemaps
+Type:
+Warning
+3xx redirects in XML sitemaps
+Timed out
+URL in XML sitemaps
+Type:
+Notice
+URL in multiple XML sitemaps
+Links
+Type:
+Critical
+Orphan URLs – only found via canonical
+Orphan URLs – only found via noindex, follow
+Orphan URLs – only found via redirect
+Orphan URLs – only linked from other isolated URLs
+Type:
+Warning
+Page has broken links to external websites
+Localization
+Type:
+Critical
+Canonicalized URL has incoming hreflang
+Disallowed URL has incoming hreflang
+Has conflicting incoming hreflang annotations
+Redirects
+Type:
+Critical
+Internal redirects from case normalization
+Internal redirects from trailing slash mismatch
+Internal URL redirect broken
+Internal URL redirects back to itself
+Internal URL is part of a chained redirect loop
+Code validation
+Type:
+Critical
+Page has identical HTML id attributes
+New issues added on August, 08, 2022
+HTTPS URL contains a form posting to HTTP
+Type:
+Critical
+Category: Security
+Pages that use HTTPS protocol, but contain a form that posts to a HTTP URL. For example, page https://domain.com/page-1/ contains <form action=”http://domain.com/form_send.php”></form>.
+Missing hreflang annotations
+Type:
+Notice
+Category: Localization
+Pages that have no incoming hreflang annotations, while there are pages with hreflang annotations on the website.
+Hreflang annotation also x-default
+Type:
+Notice
+Category: Localization
+Pages that are defined as an hreflang alternate, and also defined as the x-default hreflang.
+Page has no declared character encoding
+Type:
+Critical
+Category: Indexability
+Pages that have no declared character encoding in meta tag (for example, <meta charset=”utf-8″>) or HTTP header (for example, Content-Type: text/html; charset=UTF-8). For the HTML or XML page to be displayed correctly, the character encoding must be declared. By specifying an encoding, you help search engines understand the data so that they are able to interpret it properly.
+Page has no declared <!doctype html>
+Type:
+Critical
+Category: Code validation
+Pages that have no declared <!doctype html> or this declaration has errors. If you want your website to be displayed correctly in every browser, you need to specify which HTML and CSS you are using. Otherwise, the webpage’s content will take longer to process, and the result may not be successful. Each browser will show the page differently; the elements will be displayed incorrectly. It may hide some components while facing the errors that existed in older browsers.
+Mismatched nofollow directives in HTML and header
+Type:
+Critical
+Category: indexability
+Pages that contain nofollow directive in meta tag (for example, <meta name=”robots” content=”nofollow”>) and follow directive in HTTP header (for example, X-Robots-Tag: follow) or vice verca. If robots directives conflict, Google will use the most restrictive directive, so it means that Googlebot won’t crawl the links on such pages.
+Mismatched noindex directives in HTML and header
+Type:
+Critical
+Category: Indexability
+Pages that contain noindex directive in meta tag (for example, <meta name=”robots” content=”noindex”>) and index directive in HTTP header (for example, X-Robots-Tag: index) or vice verca. If robots directives conflict, Google will use the most restrictive directive, so it means that Googlebot won’t index such pages.
+Multiple base URLs
+Type:
+Warning
+Category: Indexability
+Pages that contain a base URL (<base href=”https://domain.com”>) defined more than one. The <base> HTML element specifies the base URL to use for all relative URLs in a document. There can be only one <base> element in a document.
+Multiple canonical
+tags
+Type:
+Warning
+Category: Indexability
+Pages where canonical directive is defined more than one: either page has two and more canonical HTML tags (<link rel=”canonical” href=”https://domain.com/folder1/product1/” />) or it has one canonical HTML tag and one canonical directive in HTTP header (Link: <https://domain.com/folder1/product1/>; rel=”canonical”).
+Multiple noindex directives
+Type:
+Warning
+Category: Indexability
+Pages where noindex directive is defined more than one: either page has two and more meta robots tags with noindex directive (<meta name=”robots” content=”noindex”>) or it has noindex directive in meta robots tag and X-Robots-Tag HTTP header (X-Robots-Tag: noindex).
+Multiple, mismatched base URLs
+Type:
+Warning
+Category: Indexability
+Pages that contain a base URL defined more than one with different values (for example, <base href=”https://domain1.com”> and <base href=”https://domain2.com”>). The <base> HTML element specifies the base URL to use for all relative URLs in a document. There can be only one <base> element in a document.
+Ivan Palii
+Head of Product at Sitechecker
+Ivan joined the team in 2018 and was the first to handle Sitechecker marketing. He had successful results in growing organic search traffic to B2B SaaS websites (Sitechecker, Copywritely).
+Read full bio
+Facebook
+Linkedin
+Share
+You may also like
+View More Posts
+Site Audit Issues
+Title Tag Length too Short Issue: Meaning, How to Fix Tips
+Ivan Palii
+Aug 13, 2024
+Site Audit Issues
+How to Fix URLs with Duplicate Page Descriptions
+Ivan Palii
+Jun 20, 2023
+Site Audit Issues
+Unsupported Plugin Issue: How to Detect and Fix
+Roman Rohoza
+Jul 16, 2024
+Check your website for SEO errors
+Go to app
+Enter your domain
+Start 14-day free trial
+No credit card needed
+Core Tools
+Website Crawler
+Website Monitoring
+Rank Tracker
+SEO Dashboard
+Search Console Dashboard
+AI Visibility Tool
+Top features
+White Label
+SEO Alerts
+SEO Experiments
+GA4+GSC Blended Report
+ChatGPT Visibility Tracker
+Gemini Visibility Tracker
+Perplexity Visibility Tracker
+AEO white-label tool
+API
+Why Sitechecker
+Semrush Alternative
+AgencyAnalytics Alternative
+Screaming Frog Alternative
+Ahrefs Alternative
+Sitebulb Alternative
+GSC Alternative
+Seobility Alternative
+SE Ranking Alternative
+SEOmonitor Alternative
+Peec Alternative
+Profound Alternative
+Promptwatch Alternative
+Ryte Alternative
+Company
+About Us
+Careers
+Contact
+Terms & Conditions
+Privacy Notice
+Reviews and Case Studies
+Educational Partnership
+Resources
+Blog
+Product Updates
+Features Roadmap
+Help Center
+Affiliate Program
+SEO Newsletter
+Reddit SEO Community
+Site Audit Issues
+Google Search Console Guides
+Interview with Experts
+API Documentation
+Follow us
+Language
+English
+© 2026 Sitechecker. All rights reserved.
+|
+sitechecker.pro is owned and operated by Cyber Circus Limited, Gibraltar, Main Street 5-9, GX11 1AA
+So, soon? Well, before you go…
+Get instant on-page SEO analysis of your home page
+Detect broken links
+Detect issues with content optimization
+Check PageSpeed for mobile and desktop
+Something went wrong. Please, try again later.
+Check
+You’ll get the report in 2 seconds without required signup
+Automate your on-page SEO routine
+Skip manual audits, see technical issues and GSC & GA4 performance while you browse.
+Add to Chrome for FREE
+Free • No sign-up • Works on any site

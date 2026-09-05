@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Apercu — the product face. Drop the licensed woff2 files into
+ * public/fonts/ (see public/fonts/README.md) and they take over automatically;
+ * until then the stack falls back to the bundled grotesque, so nothing breaks.
+ * Only the Thin weight is wired here by request — add more @font-face blocks if
+ * you license the other weights.
+ */
+@font-face {
+  font-family: 'Apercu';
+  src: url('/fonts/Apercu-Thin.woff2') format('woff2');
+  font-weight: 100 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
+ * One committed look: pure-white ground, near-black ink, hairline rules.
+ * No dark theme — the design is deliberately single-mode and ultra-minimal.
+ * Severity colours stay semantic and separate from anything brand.
+ */
+:root {
+  --font-sans: 'Apercu', var(--font-sans-fallback), ui-sans-serif, system-ui, sans-serif;
+
+  --ground: 255 255 255;
+  --surface: 255 255 255;
+  --surface-2: 250 250 250;
+  --ink: 10 10 10;
+  --muted: 115 115 115;
+  --line: 229 229 229;
+  --line-strong: 209 209 209;
+  --accent: 10 10 10;
+
+  --blocker: 176 32 26;
+  --critical: 183 80 10;
+  --warning: 140 96 4;
+  --opportunity: 21 110 74;
+  --notice: 130 130 130;
+
+  color-scheme: light;
+}
+
+/*
+ * Dark mode. Same monochrome geometry inverted: near-black ground, off-white
+ * ink, hairline rules. The theme is chosen explicitly via the floating toggle
+ * (data-theme on <html>), and falls back to the OS preference when unset.
+ * Severity hues are brightened so they stay legible on the dark ground.
+ */
+:root[data-theme='dark'] {
+  --ground: 12 12 13;
+  --surface: 22 22 24;
+  --surface-2: 32 32 35;
+  --ink: 237 237 240;
+  --muted: 148 148 155;
+  --line: 42 42 47;
+  --line-strong: 64 64 70;
+  --accent: 237 237 240;
+
+  --blocker: 233 122 114;
+  --critical: 224 162 108;
+  --warning: 216 182 104;
+  --opportunity: 92 196 146;
+  --notice: 148 148 155;
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ground: 12 12 13;
+    --surface: 22 22 24;
+    --surface-2: 32 32 35;
+    --ink: 237 237 240;
+    --muted: 148 148 155;
+    --line: 42 42 47;
+    --line-strong: 64 64 70;
+    --accent: 237 237 240;
+
+    --blocker: 233 122 114;
+    --critical: 224 162 108;
+    --warning: 216 182 104;
+    --opportunity: 92 196 146;
+    --notice: 148 148 155;
+
+    color-scheme: dark;
+  }
+}
+
+body {
+  background: rgb(var(--ground));
+  color: rgb(var(--ink));
+  font-weight: 300;
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Digits that line up in tables and score readouts. */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Wide content scrolls inside its own container, never the page body. */
+.scroll-x { overflow-x: auto; }
+
+/* Thin, visible keyboard focus that fits the monochrome scheme. */
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid rgb(var(--ink));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

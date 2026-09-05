@@ -1,0 +1,52 @@
+# Module 2 — rank tracking.
+#
+# Deliberately weekly, not daily. Free SERP tiers are ~100 searches/month, so a
+# daily run of even 4 keywords exhausts the budget in under a week. Weekly gives
+# roughly 4 runs/month; with 20 keywords that is 80 searches, inside the tier.
+#
+# The tracker also refuses to exceed the budget on its own — see the api_usage
+# ledger in SQLite — so an accidental schedule change degrades to skipped
+# keywords rather than a surprise bill.
+
+name: Rank tracking
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: sitechecker-db
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  ranks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --omit=dev --ignore-scripts
+
+      - name: Track rankings
+        env:
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          VALUESERP_KEY: ${{ secrets.VALUESERP_KEY }}
+          DATAFORSEO_LOGIN: ${{ secrets.DATAFORSEO_LOGIN }}
+          DATAFORSEO_PASSWORD: ${{ secrets.DATAFORSEO_PASSWORD }}
+          SERP_MONTHLY_LIMIT: ${{ vars.SERP_MONTHLY_LIMIT }}
+        continue-on-error: true
+        run: node scripts/ranks.ts
+
+      - name: Commit updated database
+        run: |
+          git config user.name  "sitechecker-bot"
+          git config user.email "sitechecker-bot@users.noreply.github.com"
+          git add -f .data/sitechecker.db
+          git diff --staged --quiet || git commit -m "ranks: $(date -u +%Y-%m-%d)"
+          git pull --rebase --autostash origin ${{ github.ref_name }} || true
+          git push

@@ -1,0 +1,897 @@
+[
+ {
+  "slug": "3xx-page-receives-organic-traffic",
+  "title": "How to Fix the 3xx Page Receives Organic Traffic Issue",
+  "desc": "Why Are Pages with Redirects Indexed and How Do I Fix 3xx Page Receives Organic Traffic?"
+ },
+ {
+  "slug": "3xx-redirect-sitemap",
+  "title": "3xx Redirect in Sitemap: How to Detect and Fix",
+  "desc": "Learn how to detect and fix 3xx redirects in sitemaps. Ensure proper 301 redirect handling to optimize site indexing and SEO performance."
+ },
+ {
+  "slug": "3xx-redirects",
+  "title": "URLs with “3xx Redirects” [Guide on How to Fix Them]",
+  "desc": "3xx other redirects issue means that website has pages with 3xx redirects other than 301 or 302. Learn more on how to fix this issue."
+ },
+ {
+  "slug": "4xx-client-errors",
+  "title": "What is 4xx Status Code?",
+  "desc": "4xx category is a group of standard responses that signal client-side errors. Read an Insight into 4xx Status Codes and Their Effect on SEO in our article."
+ },
+ {
+  "slug": "4xx-page-receives-organic-traffic",
+  "title": "What is 4xx Status Code?",
+  "desc": "4xx category is a group of standard responses that signal client-side errors. Read an Insight into 4xx Status Codes and Their Effect on SEO in our article."
+ },
+ {
+  "slug": "4xx-page-sitemap",
+  "title": "Not Found (4XX) URL in XML Sitemaps",
+  "desc": "Learn why 4xx errors happen in sitemaps, the best ways to detect and fix them on your website. Read about this in our comprehensive guide."
+ },
+ {
+  "slug": "500-internal-server-error",
+  "title": "What is 500 Status Code 📖 How to Fix Issue",
+  "desc": "500 Error: why does it occur, and how it impacts website SEO? Common issues and how to fix them. Specific implementation and usage of 500 status code."
+ },
+ {
+  "slug": "501-not-implemented",
+  "title": "What is 501 Status Code 📖 How to Fix Issue",
+  "desc": "The 501 status code is an HTTP response status that signifies a server issue. 501 Error \"Not Implemented\": Meaning and How to fix the issue."
+ },
+ {
+  "slug": "502-bad-gateway",
+  "title": "What is 502 Status Code 📖 How to Fix Issue",
+  "desc": "502 status code: how does it affect website SEO? Common problems and how to fix them. The specific implementation and use of 502 status code."
+ },
+ {
+  "slug": "503-service-unavailable",
+  "title": "What is 503 Status Code 📖 How to Fix Issue",
+  "desc": "503 status code: how does it affect website SEO? Common problems and how to fix them. The specific implementation and use of the 503 status code."
+ },
+ {
+  "slug": "5xx-page-sitemap",
+  "title": "“Page From Sitemap Timed Out” How to Fix the Issue",
+  "desc": "What causes internal server errors 500? How do you remove this bug from a sitemap? Learn how to fix 5xx errors."
+ },
+ {
+  "slug": "5xx-server-errors",
+  "title": "What is 5xx Server Error?",
+  "desc": "5xx status codes, including 500, 501, 502, 503, 504, 505, 506, 507, 508, 510, 511, denote various server issues impacting request fulfillment."
+ },
+ {
+  "slug": "amp-page-url-error-5xx",
+  "title": "How to Fix AMP Error 5XX",
+  "desc": "The notification of AMP server error (5XX) means that the URL of your page is experiencing a server error."
+ },
+ {
+  "slug": "amp-page-url-forbidden-403",
+  "title": "What is 403 Status Code 📖 How to Identify and Fix?",
+  "desc": "403 status code: when to use, how it impacts on website's SEO. Common issues and how to fix them. HTTP 401 Error vs HTTP 403 Error."
+ },
+ {
+  "slug": "amp-page-url-missing-canonical-tag",
+  "title": "How to Fix AMP Page Missing Canonical Tag Issue",
+  "desc": "This notification means that the canonical URL and AMP pages aren’t linked correctly."
+ },
+ {
+  "slug": "amp-page-url-not-found-4xx",
+  "title": "What Is AMP? Functionality and SEO Implications",
+  "desc": "Explore the essentials of AMP: its workings, benefits, comparisons with another tech, and steps for setting up. Dive into the future of fast-loading web pages"
+ },
+ {
+  "slug": "amp-page-validation-errors",
+  "title": "How to Fix AMP Validation Errors Issue",
+  "desc": "This notification of an invalid URL means that AMP pages with errors cause the failure of the validation test."
+ },
+ {
+  "slug": "asset-linked-via-redirect",
+  "title": "What is 301 “Moved Permanently” 📖 When Should You Use Redirect?",
+  "desc": "Find out what is 301 redirect and what are the most common types of redirection. Get the optimal strategy for implementing 301 redirect on any website."
+ },
+ {
+  "slug": "avoid-excessive-dom-size",
+  "title": "Avoid an Excessive DOM Size: Tips on How to Check and Fix",
+  "desc": "An excessive DOM size: triggers, check, importance, and fix."
+ },
+ {
+  "slug": "base-url-malformed-empty",
+  "title": "URL Malformed Error – How to Detect and Fix",
+  "desc": "What does empty href for html tag mean and how to build relative link URLs correctly"
+ },
+ {
+  "slug": "broken-redirect",
+  "title": "Bad URL Redirect (4XX or 5XX) How to Detect & Fix",
+  "desc": "Resource URL redirect broken: reasons and importance of the problem, how to check and fix the issue. Read our comprehensive guide."
+ },
+ {
+  "slug": "canonical-from-http-to-https",
+  "title": "URLs with “Canonical from HTTP to HTTPS” [Guide on How to Fix Them]",
+  "desc": "Canonical from HTTP to HTTPS issue means that HTTP page has a rel=canonical attribute that points to the HTTPS page. Learn more on how to fix it."
+ },
+ {
+  "slug": "canonical-from-https-to-http",
+  "title": "What is rel=”canonical” & How to Implement it – Full Guide",
+  "desc": "Guide on what is a canonical meta tag and how to implement it included."
+ },
+ {
+  "slug": "canonical-is-empty",
+  "title": "Canonical Tag Checker | Test if URL Canonical & Fix it ☑",
+  "desc": "Canonical URL checker helps to test a page for its rel=\"canonical\" tag. Guide on what is a canonical meta tag and how to implement it included."
+ },
+ {
+  "slug": "canonical-is-missing",
+  "title": "URLs with “Canonical is Missing” [Guide on How to Fix Them]",
+  "desc": "Find out why \"Canonical is missing\" issue has negative impact on SEO. Use step-by-step guide to detect and fix this issue."
+ },
+ {
+  "slug": "canonical-not-equal-url",
+  "title": "Canonical Tag Checker | Test if URL Canonical & Fix it ☑",
+  "desc": "Canonical URL checker helps to test a page for its rel=\"canonical\" tag. Guide on what is a canonical meta tag and how to implement it included."
+ },
+ {
+  "slug": "canonical-points-another-canonicalized-url",
+  "title": "Canonical Tag Checker | Test if URL Canonical & Fix it ☑",
+  "desc": "Canonical URL checker helps to test a page for its rel=\"canonical\" tag. Guide on what is a canonical meta tag and how to implement it included."
+ },
+ {
+  "slug": "canonical-points-external-url",
+  "title": "What is rel=”canonical” & How to Implement it – Full Guide",
+  "desc": "Guide on what is a canonical meta tag and how to implement it included."
+ },
+ {
+  "slug": "canonical-points-redirect",
+  "title": "Canonical Points to Redirect: How to Detect and Fix the Issue",
+  "desc": "Canonical tags which redirect issue occurs if the canonical link points to a redirect URL."
+ },
+ {
+  "slug": "canonical-relative-url",
+  "title": "Canonical Tag Checker | Test if URL Canonical & Fix it ☑",
+  "desc": "Canonical URL checker helps to test a page for its rel=\"canonical\" tag. Guide on what is a canonical meta tag and how to implement it included."
+ },
+ {
+  "slug": "canonical-to-non-200",
+  "title": "Canonical to non-200 Status Code: How to Fix the Issue",
+  "desc": "Canonical to non-200 issue means that URL contain a canonical link element where the canonical URL returned a server response other than 200."
+ },
+ {
+  "slug": "canonicalized-url-noindex-nofollow",
+  "title": "Using a Canonical and Noindex Tag | How to Implement it Properly",
+  "desc": "How to indicate to Google which URLs should be displayed in SERPs and should noindex pages have canonicals?"
+ },
+ {
+  "slug": "css-file-size-15-kb",
+  "title": "CSS File Size Too Large: How to Optimize Big Files",
+  "desc": "Learn how to fix 'CSS File Size too Large' issues to improve load times, performance, and maintainability with these optimization tips and tools."
+ },
+ {
+  "slug": "defer-offscreen-images",
+  "title": "How To Defer Offscreen Images: Implementing Lazy Loading on WordPress",
+  "desc": "Learn how to defer offscreen images & boost web performance using lazy loading techniques on WordPress for faster load times & improved SEO."
+ },
+ {
+  "slug": "description-duplicates",
+  "title": "Meta Description Length Checker | Test any URL on Website ☑",
+  "desc": "A meta description length checker tool allows you to see if your description is formatted correctly, SEO-friendly, and within the character limit."
+ },
+ {
+  "slug": "description-equals-title",
+  "title": "What is a Website Title Tag?",
+  "desc": "Learn to enhance SEO rankings by optimizing title tags on your website. How it works on WordPress and best practices to prove the site's health and ranking"
+ },
+ {
+  "slug": "description-is-empty",
+  "title": "Meta Description Length Checker | Test any URL on Website ☑",
+  "desc": "A meta description length checker tool allows you to see if your description is formatted correctly, SEO-friendly, and within the character limit."
+ },
+ {
+  "slug": "description-is-missing",
+  "title": "URLs with “Description is Missing” [Guide on How to Fix Them]",
+  "desc": "Find out why 'Description is missing' issue has negative impact on SEO. Use step-by-step guide to detect all pages with this issue and fix it."
+ },
+ {
+  "slug": "description-too-long",
+  "title": "What is a Meta Description? 📖 Tips and Best Practices",
+  "desc": "What is meta description: impact on SEO and CTR, recommended length and inspiring examples. SEO plugins for the different CMS and Open Graph."
+ },
+ {
+  "slug": "description-too-short",
+  "title": "What is a Meta Description? 📖 Tips and Best Practices",
+  "desc": "What is meta description: impact on SEO and CTR, recommended length and inspiring examples. SEO plugins for the different CMS and Open Graph."
+ },
+ {
+  "slug": "disallowed-robots-txt",
+  "title": "What is Robots.txt and How to Configure it",
+  "desc": "What Is Robots.txt File and How to Configure It Correctly. Use code examples to edit your robots.txt file."
+ },
+ {
+  "slug": "duplicate-pages-without-canonical",
+  "title": "“Duplicate Pages Without Canonical” [Guide on How to Fix Them]",
+  "desc": "Duplicate pages without canonical issue means that website has pages with identical contents without the link tag with the rel=canonical attribute value."
+ },
+ {
+  "slug": "efficiently-encode-images",
+  "title": "How to Fix Efficiently Encode Images Issue",
+  "desc": "From this article, you will learn why optimizing images for search engines is important and how to correct this mistake."
+ },
+ {
+  "slug": "eliminate-render-blocking-resources",
+  "title": "How to Eliminate Render-Blocking Resources: Best Practice",
+  "desc": "Learn how to speed up your WordPress site by eliminating render-blocking resources like CSS and JavaScript with our expert guide."
+ },
+ {
+  "slug": "enable-text-compression",
+  "title": "Enable Text Compression: Reduce Data Size",
+  "desc": "Find out all details about text compression: how to enable it on your site, and much more."
+ },
+ {
+  "slug": "ensure-text-remains-visible-webfont-load",
+  "title": "How to Ensure Text Remains Visible During Webfont Load",
+  "desc": "Discover how to maintain text visibility during webfont loads, enhancing UX and SEO. Learn strategies for Google Fonts, Adobe Fonts, and more."
+ },
+ {
+  "slug": "fix-empty-href-attribute-issue",
+  "title": "How to Fix Link With an Empty Href Attribute",
+  "desc": "How to check the page has a link with an empty href attribute"
+ },
+ {
+  "slug": "fix-non-canonical-url-sitemap",
+  "title": "How to Fix Non-Canonical Pages in the Sitemap",
+  "desc": "Why does your sitemap have non-canonical URLs? Learn how to remove non-canonical pages from your website."
+ },
+ {
+  "slug": "font-size-small-mobile-devices",
+  "title": "Web Page too Small on Mobile",
+  "desc": "Read our article to find out how to detect and fix mobile font size issues on your website."
+ },
+ {
+  "slug": "h1-duplicates",
+  "title": "URLs with Duplicate H1 Tags [Guide on How to Fix Them]",
+  "desc": "Find out why duplicate h1 tags have negative impact on SEO. Use step-by-step guide to fix issue and write good h1 tag for any page."
+ },
+ {
+  "slug": "h1-equals-title",
+  "title": "H1 Tag Checker | Find H1 on Page or All Website ☑",
+  "desc": "Read the detailed article about the free online tool H1 Checker and how you can use it for checking the H1 tag on your website."
+ },
+ {
+  "slug": "h1-is-empty",
+  "title": "URLs with “H1 is empty” [Guide on How to Fix Them]",
+  "desc": "H1 is empty issue means that website has pages where h1 tag is empty (e.g. ). Learn more on how to fix this issue in our article."
+ },
+ {
+  "slug": "h1-is-missing",
+  "title": "URLs with “H1 is missing” [Guide on How to Fix It]",
+  "desc": "How to detect and fix missing H1 tags, crucial for SEO and user experience. Ensure proper HTML structure and validate your CMS templates."
+ },
+ {
+  "slug": "h1-too-long",
+  "title": "H1 Tag Checker | Find H1 on Page or All Website ☑",
+  "desc": "Read the detailed article about the free online tool H1 Checker and how you can use it for checking the H1 tag on your website."
+ },
+ {
+  "slug": "h1-too-short",
+  "title": "H1 Tag Checker | Find H1 on Page or All Website ☑",
+  "desc": "Read the detailed article about the free online tool H1 Checker and how you can use it for checking the H1 tag on your website."
+ },
+ {
+  "slug": "high-external-linking",
+  "title": "What are External Links ​​📖 Tips, Strategies, and Tools",
+  "desc": "External links, what are they and their impact on your website's SEO. Learn everything you need about external links and how to benefit from them."
+ },
+ {
+  "slug": "how-to-fix-the-alt-text-too-long-issue",
+  "title": "Image Alt Tag Checker: Test If Alts Exist and Texts Correct ☑",
+  "desc": "Find out what an alt attribute is and how to use alt tag properly. Check all images for a specific URL on the availability of alt text."
+ },
+ {
+  "slug": "hreflang-annotation-invalid",
+  "title": "Hreflang Mistakes and Tips for Hreflang Implementation",
+  "desc": "Learn about common hreflang mistakes, including incorrect hreflang values, missing self-referencing hreflang tags, conflicting hreflang and canonical tags, and more."
+ },
+ {
+  "slug": "hreflang-broken-page",
+  "title": "How to Fix “Hreflang to Broken Page Error” Issue",
+  "desc": "Hreflang to broken page error. Meaning, causes, and solution."
+ },
+ {
+  "slug": "hreflang-defined-html-lang-missing",
+  "title": "Site Has no Hreflang Tags – How to Fix",
+  "desc": "Learn how to resolve the \"no hreflang tags\" issue on your site, enhancing SEO and user experience for a global audience."
+ },
+ {
+  "slug": "hreflang-html-lang-mismatch",
+  "title": "How to Fix the Issue of Mismatched Hreflang and Lang Attributes",
+  "desc": "Do you keep getting the hreflang and HTML lang mismatch error? In this guide, we show you how to fix the problem."
+ },
+ {
+  "slug": "hreflang-non-canonical",
+  "title": "Hreflang to Non-Canonical: How to Handle the Issue",
+  "desc": "Having the improper hreflang annotation can cause confusion in search engines. This guide will discuss how you can fix hreflang to a non-canonical URL."
+ },
+ {
+  "slug": "html-lang-attribute-invalid",
+  "title": "URLs with “HTML Lang Attribute Invalid“ [Guide on How to Fix Them]",
+  "desc": "Find out why \"HTML lang attribute invalid\" issue have negative impact on SEO. Use step-by-step guide to detect and fix this issue."
+ },
+ {
+  "slug": "html-lang-attribute-missing",
+  "title": "URLs with “HTML Lang Attribute Missing” [Guide on How to Fix Them]",
+  "desc": "HTML lang attribute missing issue means that website has pages where the attribute is missing. Learn how to fix this issue."
+ },
+ {
+  "slug": "http-basic-authentication",
+  "title": "HTTP Basic Authentication | Comparisons & Error Handling",
+  "desc": "Learn about HTTP Basic Authentication, its simplicity, and security considerations. Implement secure practices like HTTPS, constant-time comparisons, and error handling."
+ },
+ {
+  "slug": "http-https-redirect",
+  "title": "How to Fix HTTP and HTTPS Redirect Issue",
+  "desc": "Learn about mishaps that can happen when redirecting HTTP to HTTPS and how to fix them."
+ },
+ {
+  "slug": "http-page-internal-links-https",
+  "title": "HTTPS Page Has Internal Links to HTTP: How to Fix",
+  "desc": "What is Canonical is empty? The reasons why Canonical is empty occurs. Step-by-step guide on how to fix the error if you are a website owner."
+ },
+ {
+  "slug": "http-url-contains-password-input-field",
+  "title": "HTTP Basic Authentication | Comparisons & Error Handling",
+  "desc": "Learn about HTTP Basic Authentication, its simplicity, and security considerations. Implement secure practices like HTTPS, constant-time comparisons, and error handling."
+ },
+ {
+  "slug": "https-http-mixed-content",
+  "title": "How to Fix a Website with Blocked Mixed Content: Tips & Best Practice",
+  "desc": "Learn how to detect and fix mixed content errors to secure your site, enhance SEO, and improve user trust. Еxamples and step-by-step solutions."
+ },
+ {
+  "slug": "https-page-has-internal-links-to-http-page",
+  "title": "HTTPS Page Has Internal Links to HTTP Page [Guide on How to Fix It]",
+  "desc": "Find out why HTTPS pages with internal links to HTTP pages have negative impact on SEO. Use step-by-step guide to fix this issue."
+ },
+ {
+  "slug": "https-page-links-http-css",
+  "title": "CSS Minify: Check if Page CSS Should be Compressed ☑",
+  "desc": "Check whether your page needs CSS compression. Find out what is CSS minification and how to minify CSS properly."
+ },
+ {
+  "slug": "https-page-links-http-image",
+  "title": "Dealing With the HTTPS Links to HTTP Image Error",
+  "desc": "Identify HTTP image errors in your site and understand what can solve them. Learn more about mixed content and its issues."
+ },
+ {
+  "slug": "https-page-links-http-javascript",
+  "title": "Javascript Minification Test | Is Website JS Need Minified",
+  "desc": "Read the detailed article about the minification in JavaScript and how you can do it for your website."
+ },
+ {
+  "slug": "image-size-100-kb",
+  "title": "Image Size Greater Than 100kb",
+  "desc": "Find out why \"Image size is over 100 KB\" issue have negative impact on SEO. Use step-by-step guide to detect and fix this issue."
+ },
+ {
+  "slug": "internal-link-no-anchor-text",
+  "title": "How to Fix Internal Link Anchor Text Issue",
+  "desc": "Learn how to find and fix internal links with no anchor text, as these are considered errors. Read the detailed guide by Sitechecker."
+ },
+ {
+  "slug": "internal-redirected-urls",
+  "title": "How to Fix the Internal Redirect of the URL?",
+  "desc": "Internal Redirected URLs: Explore our comprehensive guide to understanding the causes of this issue, as well as how to identify, diagnose, and resolve it."
+ },
+ {
+  "slug": "internal-redirects-trailing-slash-mismatch",
+  "title": "How to Fix Internal Redirects from Trailing Slash Mismatch?",
+  "desc": "Find out reasons for internal redirects from trailing forward slash mismatch and how to fix it."
+ },
+ {
+  "slug": "invalid-characters-url",
+  "title": "All About Invalid URL Characters",
+  "desc": "Learn about the causes of invalid URLs and how to fix their characters. We'll explain what triggers the issue, how to check for errors, and how to troubleshoot them."
+ },
+ {
+  "slug": "invalid-content-type",
+  "title": "Invalid MIME Type: How to Detect and Fix",
+  "desc": "Learn how to fix invalid Content-Type text HTML errors. We'll show you how to fix the URL and linked data in your web pages."
+ },
+ {
+  "slug": "javascript-file-size-25-kb",
+  "title": "How to Reduce the File Size of a Website’s JavaScript?",
+  "desc": "Find out why \"JavaScript file size is over 25 KB\" issue have negative impact on SEO. Use step-by-step guide to detect and fix this issue."
+ },
+ {
+  "slug": "link-url-onclick-attribute",
+  "title": "HTML onclick Attribute: Usage, SEO Impact, and Troubleshooting",
+  "desc": "Explore the purpose and use of the HTML onclick attribute, its relevance to SEO, and common troubleshooting tips. Enhance interactivity and user experience on your web pages."
+ },
+ {
+  "slug": "link-url-referencing-local-unc-file-path",
+  "title": "What is a URL Link",
+  "desc": "URL (or URL-address) is a special form of individual address of a certain resource on the Internet."
+ },
+ {
+  "slug": "link-url-referencing-localhost-127-0-0-1",
+  "title": "What Is Localhost 📖 How Does it Work & Common Issues",
+  "desc": "Localhost' and the loopback IP 127.0.0.1. Learn how they function, their impact on SEO, and ways to troubleshoot common localhost errors."
+ },
+ {
+  "slug": "link-whitespace-href-attribute",
+  "title": "What is a URL Link",
+  "desc": "URL (or URL-address) is a special form of individual address of a certain resource on the Internet."
+ },
+ {
+  "slug": "loads-page-resources-using-protocol-relative-urls",
+  "title": "The system loads page resources using protocol-relative URLs Issue",
+  "desc": "What to do if the system loads page resources using protocol-relative URLs? Why is this a problem, and how to fix it?"
+ },
+ {
+  "slug": "low-word-count",
+  "title": "Website Word Counter | Get Word Count for Any Website Page",
+  "desc": "Optimize your SEO with Website Word Counter—get precise word counts and key content insights for any page or full site."
+ },
+ {
+  "slug": "meta-refresh-redirect",
+  "title": "Meta Refresh Redirect: How to Detect and Fix the Issue",
+  "desc": "How meta refresh redirects impact SEO and user experience and discover solutions to fix issues related to accessibility, browser compatibility, and security."
+ },
+ {
+  "slug": "mismatched-canonical-tag-html-http-header",
+  "title": "What is rel=”canonical” & How to Implement it – Full Guide",
+  "desc": "Guide on what is a canonical meta tag and how to implement it included."
+ },
+ {
+  "slug": "mismatched-hreflang-html-lang-declarations",
+  "title": "How to Fix the Issue of Mismatched Hreflang and Lang Attributes",
+  "desc": "Do you keep getting the hreflang and HTML lang mismatch error? In this guide, we show you how to fix the problem."
+ },
+ {
+  "slug": "missing-alt-text",
+  "title": "How Do I Fix Missing Alt Text Issue?",
+  "desc": "How do missing alt attributes affect your SEO? Learn how to find and fix missing alt text and improve your website performance."
+ },
+ {
+  "slug": "missing-reciprocal-hreflang-no-return-tag",
+  "title": "Missing Reciprocal Hreflang (no Return-Tag)",
+  "desc": "Causes of the \"no reciprocal hreflang\" error, ways to fix it, all about the correct functioning of the hreflang attribute."
+ },
+ {
+  "slug": "multiple-description-tags",
+  "title": "Multiple Meta Description Tags: Detect and Fix the Issue",
+  "desc": "Learn how to detect and fix the issue of multiple meta description tags in your HTML to improve SEO and avoid search engine confusion."
+ },
+ {
+  "slug": "multiple-h1",
+  "title": "URLs with Multiple H1 Tags [Guide on How to Fix Them]",
+  "desc": "Multiple h1 means that you have more than one h1 tag on the page. While a page can have multiple h2-h6 tags, it's important to only have one h1 tag."
+ },
+ {
+  "slug": "multiple-title-tags",
+  "title": "Multiple Title Tags: How to Detect and Fix the Issue",
+  "desc": "Fix the \"multiple title tags\" issue: detect duplicate tags, remove extras, and ensure proper placement for better SEO and user experience."
+ },
+ {
+  "slug": "multiple-viewport-tags-found",
+  "title": "What Is Viewport Meta Tag: Importance & SEO Impacts",
+  "desc": "Dive deep into the viewport meta tag, its key properties, and its crucial role in responsive design. Learn its importance for mobile optimization and how it impacts SEO."
+ },
+ {
+  "slug": "no-keywords-body-text",
+  "title": "What are Meta Keywords? Are They Still Relevant?",
+  "desc": "Some optimizers have stopped using this meta tag having doubts that it is still relevant. Where do such thoughts come from?"
+ },
+ {
+  "slug": "no-keywords-meta-description",
+  "title": "Meta Description Length Checker | Test any URL on Website ☑",
+  "desc": "A meta description length checker tool allows you to see if your description is formatted correctly, SEO-friendly, and within the character limit."
+ },
+ {
+  "slug": "no-keywords-title",
+  "title": "No Keywords Found in the Page Title: How to Fix It",
+  "desc": "No Keywords Found in The Page Title. Discover all about this issue: what triggers it, why it is important, and how to fix it."
+ },
+ {
+  "slug": "nofollow-html-http-header",
+  "title": "Nofollow Link Checker | Detect Nofollow Attributes in Website",
+  "desc": "Optimize your SEO with our Nofollow Link Checker. Detect non-indexable attributes, verify link status codes, and conduct full site audits."
+ },
+ {
+  "slug": "noindex-follow-page",
+  "title": "URLs with “Noindex Follow Page” [Guide on How to Fix Them]",
+  "desc": "Noindex follow page issue means that there are URLs that have a 'noindex' but don't have a 'nofollow' tag in the HTML code or in the HTTP response header."
+ },
+ {
+  "slug": "noindex-found-rel-next-prev-paginated-url",
+  "title": "How Does Pagination Noindex Harm SEO: Detect and Fix Issue Guide",
+  "desc": "Let's find out whether it is crucial for a website to have a noindex directive for pagination pages and how and when this issue should be fixed."
+ },
+ {
+  "slug": "noindex-html-http-header",
+  "title": "URLs with “Noindex in HTML and HTTP Header” [How to Fix Them]",
+  "desc": "Noindex in HTML and HTTP header means that website has pages where a 'noindex' directive is specified in the meta tag and in the HTTP response header."
+ },
+ {
+  "slug": "noindex-page-receives-organic-traffic",
+  "title": "How to Fix the Noindex Page Receives Organic Traffic Issue",
+  "desc": "What to do if the noindex tag does not work and the page continues to receive organic traffic."
+ },
+ {
+  "slug": "noindex-page-sitemap",
+  "title": "How to Fix Noindex Page in Sitemap",
+  "desc": "Learn how to detect and fix \"noindex\" pages in your sitemap. Optimize your sitemap for better SEO by following these practical steps and guidelines."
+ },
+ {
+  "slug": "non-indexable-pages",
+  "title": "Non-Indexable Pages: How to Fix the Issue",
+  "desc": "Find out why \"Non-indexable pages\" issue have negative impact on SEO. Use step-by-step guide to detect and fix this issue."
+ },
+ {
+  "slug": "noscript-head-contains-invalid-html-elements",
+  "title": "URLs with “Noscript in head contains invalid HTML elements” [Complete Guide on How to Fix It]",
+  "desc": "Find out why \"Noscript in head contains invalid HTML elements\" issue have negative impact on SEO. Use step-by-step guide to detect and fix this issue."
+ },
+ {
+  "slug": "not-pages-hreflang-group-crawled",
+  "title": "Website Crawler: Online Spider to Test URLs for Errors",
+  "desc": "Online crawler tool (spider) to test the whole website and specific pages for broken links and redirects, duplicate content, and indexing issues."
+ },
+ {
+  "slug": "one-page-language-hreflang",
+  "title": "Hreflang Tag Checker | Analyze Hreflang for any Site Page ☑",
+  "desc": "Find out more on properly targeting a page by location and language with our Hreflang Checker tool and Get ultimate insights on your website's performance."
+ },
+ {
+  "slug": "open-graph-tags-incomplete",
+  "title": "URLs with “Open Graph tags incomplete” [Guide on How to Fix Them]",
+  "desc": "Find out why \"Open Graph tags incomplete\" issue have negative impact on SEO. Use step-by-step guide to detect and fix this issue."
+ },
+ {
+  "slug": "open-graph-tags-missing",
+  "title": "How to Fix URLs With Incomplete Open Graph Tags",
+  "desc": "Find out why \"Open Graph tags missing\" issue have negative impact on SEO. Use step-by-step guide to detect and fix this issue."
+ },
+ {
+  "slug": "open-graph-url-not-matching-canonical",
+  "title": "URLs with “Open Graph URL not Matching Canonical” [How to Fix Them]",
+  "desc": "Open Graph URL not matching canonical means that a specific URL has its Open Graph microdata pointing to an URL that is different from the one set in canonical."
+ },
+ {
+  "slug": "outgoing-hreflang-annotations-using-relative-urls",
+  "title": "Hreflang Tag Checker | Analyze Hreflang for any Site Page ☑",
+  "desc": "Find out more on properly targeting a page by location and language with our Hreflang Checker tool and Get ultimate insights on your website's performance."
+ },
+ {
+  "slug": "page-broken-css-files",
+  "title": "What is a Parse Error in CSS?: Easy Ways to Detect and Fix It",
+  "desc": "A parse error in CSS arises when the CSS code written by the developer contains syntax or other errors. Best practices for error handling, and common mistakes"
+ },
+ {
+  "slug": "page-broken-images",
+  "title": "Best Ways to Fix the Broken Images Error",
+  "desc": "What causes broken images on a website? Learn more about the problem and ways to solve it."
+ },
+ {
+  "slug": "page-broken-javascript-files",
+  "title": "How to Fix JavaScript Errors: Tips on How to Detect and Prevent Them",
+  "desc": "Fixing broken JavaScript links can be extremely frustrating. Here, we’ll discuss what you can do to fix broken JavaScript and why the error alert occurs."
+ },
+ {
+  "slug": "page-empty-src-attributes",
+  "title": "How to Fix “SRC Cannot be Blank” Issue",
+  "desc": "What problems can be caused by empty SRC attributes? Learn how to detect and fix the issue in time."
+ },
+ {
+  "slug": "page-has-no-outgoing-links",
+  "title": "URLs with ‘Page Has no Outgoing Links’ [Guide on How to Fix Them]",
+  "desc": "If a page has no outgoing links, it is a \"dead end\" for both website visitors and search engine crawlers. Learn how to fix this issue."
+ },
+ {
+  "slug": "page-has-nofollow-outgoing-internal-links",
+  "title": "Outgoing Internal Links Contain Nofollow Attribute: How to Fix",
+  "desc": "Page has nofollow outgoing internal links issue means that a specific URL contains internal links with a rel=nofollow attribute."
+ },
+ {
+  "slug": "page-links-broken-page",
+  "title": "How to Fix Page Has Links to Broken Page Issue",
+  "desc": "Broken Links are URLs that lead to pages with server response codes 4xx or 5xx. Find out how to find broken page issues on your site."
+ },
+ {
+  "slug": "page-links-redirect",
+  "title": "How to Fix Page Has Links to Redirect Issue",
+  "desc": "Page has links to redirecting URLs. Meaning, causes, and solutions"
+ },
+ {
+  "slug": "page-receives-follow-nofollow-internal-links",
+  "title": "Nofollow Link Checker | Detect Nofollow Attributes in Website",
+  "desc": "Optimize your SEO with our Nofollow Link Checker. Detect non-indexable attributes, verify link status codes, and conduct full site audits."
+ },
+ {
+  "slug": "page-redirected-image",
+  "title": "Image Redirect: Guide for SEO and User Experience",
+  "desc": "Discover why image redirects matter for SEO and user experience. Learn when to use them, types (301, 302), and best practices to avoid broken links during migrations."
+ },
+ {
+  "slug": "page-referenced-one-language-hreflang",
+  "title": "Hreflang Tag Checker | Analyze Hreflang for any Site Page ☑",
+  "desc": "Find out more on properly targeting a page by location and language with our Hreflang Checker tool and Get ultimate insights on your website's performance."
+ },
+ {
+  "slug": "page-serp-titles-not-match",
+  "title": "How to fix Page and SERP Titles not Matching Issue",
+  "desc": "When a page title is different from the search engine result it can be confusing for users. Luckily, there are several ways you can fix this so that your page matches its ranking in Google's results."
+ },
+ {
+  "slug": "page-sitemap-timed",
+  "title": "How Do I Fix a Timed Out Error URL in the Sitemap?",
+  "desc": "Why does a 504 Gateway Timeout occur? Learn how to remove the timed out pages from your sitemap and improve your website performance."
+ },
+ {
+  "slug": "pages-dont-character-encoding",
+  "title": "How to Declare HTML Character Encoding",
+  "desc": "What does “the character encoding of the HTML document was not declared” mean? Learn why this error occurs and how to fix it."
+ },
+ {
+  "slug": "pages-dont-doctype-declared",
+  "title": "Doctype HTML Error How to Detect and Fix",
+  "desc": "What happens if you don’t put in your code? Why is the doctype declaration important? Learn about the meaning of doctype declaration for HTML pages."
+ },
+ {
+  "slug": "pages-large-html-size",
+  "title": "HTML Size is Too Long: Detect and Fix the Issue",
+  "desc": "Fix the \"user-scalable=no not working\" issue in your viewport meta tag by ensuring correct syntax, checking browser compatibility, and validating HTML/CSS."
+ },
+ {
+  "slug": "pages-multiple-canonical-urls",
+  "title": "How to Fix Multiple Canonical URLs",
+  "desc": "This notification means the URL has a canonical element specified in multiple locations (either in the HTML, in the HTTP header, or both)."
+ },
+ {
+  "slug": "pages-no-viewport-tag",
+  "title": "Missing Viewport Meta Tag: How to fix",
+  "desc": "Find out how to add a viewport meta tag and much more: triggers, check, importance."
+ },
+ {
+  "slug": "pages-slow-load-speed",
+  "title": "Website Speed Test | Check Speed of any URL on Website ☑",
+  "desc": "Try website speed test and check page loading speed. Find specific errors that slow your website and explore possible ways to speed up the website."
+ },
+ {
+  "slug": "pages-underscores-dashes-url",
+  "title": "Underscore in URL: How to Detect and Fix Encode Dash",
+  "desc": "Learn what dashes and underscores do for URLs and how they affect your pages. We'll show you the triggers, as well as how to fix any issues."
+ },
+ {
+  "slug": "pages-url-contains-form-get-method",
+  "title": "All About the Form GET Method in URLs",
+  "desc": "What happens with a form GET in a URL? Learn more about the GET method and its benefits and risks."
+ },
+ {
+  "slug": "paginated-url-missing-next-prev-canonicals",
+  "title": "rel=next/prev Canonical Issue: How to Detect and Fix",
+  "desc": "Learn how to detect and fix issues with rel=\"prev\", rel=\"next\", and canonical tags to improve SEO and ensure proper indexing and navigation of paginated content."
+ },
+ {
+  "slug": "pagination-url-not-in-anchor-tag",
+  "title": "Pagination URL not in Anchor Tag | How to Fix Issue",
+  "desc": "\"Pagination URL not in anchor tag\" refers to a situation where the URLs used for page numbering are not enclosed within HTML anchor tags."
+ },
+ {
+  "slug": "properly-size-images",
+  "title": "How to Make Properly Size Images?",
+  "desc": "Mismatches in size images on pages: triggers, check, and fix."
+ },
+ {
+  "slug": "query-string-contains-question-mark",
+  "title": "Question Mark in URL: How to Detect and Fix Issue",
+  "desc": "Learn what URLs are and how adding question marks in a query string affects it. We'll show you what question marks are for in a query string and how to fix this issue."
+ },
+ {
+  "slug": "query-string-contains-search-filter-parameters",
+  "title": "What is URL Parameters 📖 When to Use; How to Implement",
+  "desc": "URL parameters: how they function, their impact on SEO, and best practices. Dive deep into expert insights and troubleshooting tips for optimal web performance."
+ },
+ {
+  "slug": "redirect-chains",
+  "title": "Redirect Chains Issue: How to Detect and Fix",
+  "desc": "Learn how to detect and fix redirect chains to improve website performance and SEO. Avoid common pitfalls and ensure direct URL paths."
+ },
+ {
+  "slug": "redirect-loop",
+  "title": "Redirect Loops How to Identify and Fix Issue",
+  "desc": "Learn to identify and fix redirect loops causing 'Too many redirects' errors. Troubleshoot misconfigured rules, conflicting plugins, and more in this guide."
+ },
+ {
+  "slug": "redirecting-hreflang-link",
+  "title": "How to Fix Redirecting Hreflang Link Issue",
+  "desc": "Hreflang annotations link to redirecting URLs. Meaning, causes, and solutions"
+ },
+ {
+  "slug": "reduce-server-response-times",
+  "title": "How To Effectively Reduce Server Response Time: Tips Best Practices",
+  "desc": "Learn how to boost your website's speed by reducing server response time. Discover the importance of TTFB, optimization strategies, and tools for measurement."
+ },
+ {
+  "slug": "release-history",
+  "title": "Site Audit Issues Release History",
+  "desc": "The history of site-level and page-level checks added to Site Audit and Site Monitoring tools in Sitechecker. Grouped by date."
+ },
+ {
+  "slug": "remove-unused-css",
+  "title": "Remove Unused CSS",
+  "desc": "Step-by-step instructions on how to remove unused CSS. Learn more about unused CSS and how to boost the performance of your webpage."
+ },
+ {
+  "slug": "remove-unused-javascript",
+  "title": "How Do I Remove Unused JavaScript From My Website?",
+  "desc": "How does unused JavaScript affect your website’s performance? Learn how to find and remove unused JavaScript from your website."
+ },
+ {
+  "slug": "robots-txt-not-found",
+  "title": "How to Fix “Web Crawler Can’t Find Robots.txt File” Issue",
+  "desc": "Common errors that occur when creating a robots.txt file, in particular - robots.txt not found."
+ },
+ {
+  "slug": "robots-without-link-xml-sitemap",
+  "title": "Sitemap.XML Not Indicated In Robots.TXT: How to Check and Fix",
+  "desc": "Discover the importance of indicating your Sitemap.XML in Robots.TXT for better SEO. Learn how Robots.txt and XML Sitemaps boost website visibility and ranking in search results"
+ },
+ {
+  "slug": "self-reference-hreflang-annotation-missing",
+  "title": "No Self-Referencing Hreflang URLs",
+  "desc": "Sort out the missing self-reference hreflang annotation problem in your source code and learn what it means."
+ },
+ {
+  "slug": "serve-images-next-gen-formats",
+  "title": "Serve Images in Next-Gen Formats: How to Detect and Fix",
+  "desc": "Read this article to determine how next-generation image formats affect your site's search engine rankings."
+ },
+ {
+  "slug": "site-no-favicon",
+  "title": "How to Fix the Favicon Not Showing Up Issue",
+  "desc": "The principles of creating a graphic icon for the site. The reasons it is not displayed in browsers and interfaces, types of errors, and ways to fix them."
+ },
+ {
+  "slug": "site-not-safe",
+  "title": "How to Fix the “Not Secure or Dangerous” Issue",
+  "desc": "How to fix the \"This Site is Not secure or dangerous\" browser warning caused by untrusted or expired certificates, mixed content, phishing, unsecured connections, etc."
+ },
+ {
+  "slug": "sitemap-xml-file-format-errors",
+  "title": "How to Fix XML Sitemap Format Errors",
+  "desc": "Learn how to solve a sitemap wrong formatting error. We'll show you the simple steps to fix these website flaws."
+ },
+ {
+  "slug": "sitemap-xml-files-large",
+  "title": "How to Split a Large Sitemap: Check & Simplify",
+  "desc": "Learn how to split and simplify large sitemaps, manage sitemap size, and optimize for better SEO and faster website performance with these effective tips."
+ },
+ {
+  "slug": "style-sheets-loaded-javascript-resources",
+  "title": "How Do I Remove Unused JavaScript From My Website?",
+  "desc": "How does unused JavaScript affect your website’s performance? Learn how to find and remove unused JavaScript from your website."
+ },
+ {
+  "slug": "tap-targets-small-close",
+  "title": "How to Fix the “Tap Targets are not Sized Appropriately” Issue?",
+  "desc": "Find out how to properly use the size of tap targets for your site."
+ },
+ {
+  "slug": "technically-duplicate-urls",
+  "title": "How to Fix Technically Duplicate URLs Issue",
+  "desc": "The Technically Duplicate Pages Issue appears if there is a technically identical URL for any internal URL."
+ },
+ {
+  "slug": "text-to-code-ratio-is-low",
+  "title": "Pages Have Low Text-HTML Ratio: How to Detect and Fix Issue",
+  "desc": "Find out why low text to code ratio has negative impact on SEO. Use step-by-step guide to detect and fix this issue."
+ },
+ {
+  "slug": "title-duplicates",
+  "title": "Duplicate Title Tags Issue: How to Find & Fix Them",
+  "desc": "Duplicate title tags can harm SEO and user experience. Learn how to identify, analyze, and fix these issues to improve your site's performance and rankings."
+ },
+ {
+  "slug": "title-is-empty",
+  "title": "What is a Website Title Tag?",
+  "desc": "Learn to enhance SEO rankings by optimizing title tags on your website. How it works on WordPress and best practices to prove the site's health and ranking"
+ },
+ {
+  "slug": "title-is-missing",
+  "title": "Missing Title: How to Detect and Fix the Issue",
+  "desc": "Learn how to detect and fix the \"missing title tag\" issue in site audits. Improve SEO, user experience, and social sharing with proper title tags."
+ },
+ {
+  "slug": "title-meta-description-same",
+  "title": "What is a Website Title Tag?",
+  "desc": "Learn to enhance SEO rankings by optimizing title tags on your website. How it works on WordPress and best practices to prove the site's health and ranking"
+ },
+ {
+  "slug": "title-too-long",
+  "title": "Title Tag Length too Long Issue: How to Detect & Fix",
+  "desc": "Title too long issue means that title tag length on some pages is longer than 65 characters. Use step-by-step guide to fix this issue."
+ },
+ {
+  "slug": "title-too-short",
+  "title": "SEO Title Length the Title is too Short: How to Detect & Fix",
+  "desc": "Title too short issue means that title tag length on some pages is shorter than 35 characters. Use step-by-step guide to fix this issue."
+ },
+ {
+  "slug": "twitter-card-description-long",
+  "title": "Twitter Description Length is Too Long",
+  "desc": "Do you get Twitter Card errors from having too long of a description? Learn how to fix the Twitter Card description length for your website."
+ },
+ {
+  "slug": "twitter-card-incomplete",
+  "title": "URLs with “Twitter card incomplete” [Guide on How to Fix Them]",
+  "desc": "Find out why \"Twitter card incomplete\" issue have negative impact on SEO. Use step-by-step guide to detect and fix this issue."
+ },
+ {
+  "slug": "unsupported-browser-plugins-found",
+  "title": "WordPress Plugin Detector (FREE) Find out Plugins from WP site",
+  "desc": "Want to find out what wordpress plugins are being used by your new favorite WordPress blog? Use a wordpress theme detector! Read on to find out how."
+ },
+ {
+  "slug": "url-contains-non-ascii-characters",
+  "title": "How to Remove Non-ASCII Characters [SEO Friendly Guide]",
+  "desc": "We'll show you how to fix non-ASCII characters within a URL. Learn more about what characters are valid for URLs."
+ },
+ {
+  "slug": "url-contains-upper-case-characters",
+  "title": "Сapital Letters in URL: SEO Impact, Tips on How to Manage it",
+  "desc": "How are URLs affected by the capitalization of characters? Learn more about the case sensitivity of your web address."
+ },
+ {
+  "slug": "url-contains-whitespace",
+  "title": "Space in URL | How to Fix URL Whitespace Characters",
+  "desc": "Do you know why it’s better to avoid using whitespaces in URLs? Learn more about whitespace characters and how to resolve the issue."
+ },
+ {
+  "slug": "url-has-more-than-three-parameters",
+  "title": "“More than three parameters in URL” [Guide on How to Fix It]",
+  "desc": "More than three parameters in URL issue means website has pages URLs with more than three parameters. Learn more on how to fix the issue."
+ },
+ {
+  "slug": "url-multiple-xml-sitemaps",
+  "title": "Multiple Sitemaps | Steps to Fix URL in Multiple Sitemaps",
+  "desc": "Optimize large websites with multiple sitemaps for better SEO. Learn how to fix duplicate URLs and ensure efficient crawling and indexing by search engines."
+ },
+ {
+  "slug": "verify-nofollow-attributes-external-links-reported-site-auditor",
+  "title": "Nofollow Link Checker | Detect Nofollow Attributes in Website",
+  "desc": "Optimize your SEO with our Nofollow Link Checker. Detect non-indexable attributes, verify link status codes, and conduct full site audits."
+ },
+ {
+  "slug": "viewport-tag-initial-scale-incorrect",
+  "title": "Viewport Initial Scale not Working: How to Detect and Fix",
+  "desc": "Discover why the initial scale can work incorrectly and how to use it in the HTML document."
+ },
+ {
+  "slug": "viewport-tag-maximum-scale-set",
+  "title": "Maximum-Scale in Viewport Tags: Impact on Web Usability",
+  "desc": "Explore how the maximum-scale attribute in viewport tags affects responsive web design, usability, and accessibility.Impact on user experience, best practices for web content scalability."
+ },
+ {
+  "slug": "viewport-tag-minimum-scale-set",
+  "title": "How to Check Viewport Tag Min Scale Issue",
+  "desc": "Find out how to check and fix viewport tag has a minimum-scale set in this article."
+ },
+ {
+  "slug": "viewport-tag-missing-initial-scale",
+  "title": "What Is Viewport Meta Tag: Importance & SEO Impacts",
+  "desc": "Dive deep into the viewport meta tag, its key properties, and its crucial role in responsive design. Learn its importance for mobile optimization and how it impacts SEO."
+ },
+ {
+  "slug": "viewport-tag-prevents-user-scaling",
+  "title": "The Viewport <meta> Tag Prevents the User From Scaling",
+  "desc": "You can prevent users from scaling with the attribute user-scalable=\"no\""
+ },
+ {
+  "slug": "viewport-tag-specific-width-set",
+  "title": "What Is Viewport Meta Tag: Importance & SEO Impacts",
+  "desc": "Dive deep into the viewport meta tag, its key properties, and its crucial role in responsive design. Learn its importance for mobile optimization and how it impacts SEO."
+ },
+ {
+  "slug": "x-default-hreflang-annotation-missing-empty",
+  "title": "How to Fix the Hreflang Missing X-Default Issue",
+  "desc": "Creating a website that caters to visitors from different nationalities and languages is tricky. Here is how to fix the issue if you have a missing x-default hreflang annotation."
+ }
+]

@@ -1,0 +1,20 @@
+node_modules/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets
+.env
+.env.local
+
+# PSI response cache (24h TTL, regenerates itself)
+.data/cache/
+
+# Local data. The GitHub Actions workflows commit the database explicitly with
+# `git add -f` when you want history to persist across stateless runs.
+.data/
+
+# Research corpus (179 downloaded HTML files)
+research/issues/
+research/*.html
+research/*.xml

@@ -1,0 +1,220 @@
+URLs with “H1 is missing” [Guide on How to Fix It]
+Website SEO checker & Audit tool
+Platform
+Core tools
+Website Crawler
+Crawl the website for technical issues
+Website Monitoring
+Track website changes critical for SEO
+Rank Tracker
+Track website positions by keywords
+GSC Dashboard
+Get GSC data without limits
+SEO Dashboard
+One place for all SEO metrics
+AI Visibility Tracker
+Track AI traffic, visibility, and rankings
+Core tools
+Website Crawler
+Website Monitoring
+Rank Tracker
+GSC Dashboard
+SEO Dashboard
+AI Visibility Tracker
+Pay as you go
+Website Migration Checker
+Bulk URL Checker
+One-Time Site Audit
+Top features
+White Label
+SEO Alerts
+Free tools
+SEO Checker
+SEO Chrome Extension
+Case Studies
+Pricing
+Resources
+Product Updates
+Features Roadmap
+Free SEO Tools
+Blog
+Help Center
+Educational Partnership
+Affiliate Program
+Latest Post
+Marketing
+Web Hosting
+Interview
+Go to app
+Start for Free
+Log in
+Start for Free
+Blog
+Site Audit Issues
+URLs with "H1 is Missing"
+How to Fix URLs Where H1 Tag is Missing
+Ivan Palii
+Nov 6, 2020                                                                                    [Updated on Feb 18, 2026]
+Free Complete
+Site Audit
+Access a full website audit with over 300 technical insights.
+Something went wrong. Please, try again later.
+Check my website
+Trusted by
+Free Website SEO Checker & Audit Tool
+Scan the site for 300+ technical issues
+Monitor your site health 24/7
+Track website rankings in any geo
+Get started
+Free SEO Chrome Extension
+Automate your on-page SEO routine
+On Page SEO
+Content optimization
+Links
+GSC Insights
+Add to Chrome
+4.5
+182K
+What Does “H1 Tag Missing” Mean?
+An “H1 tag missing” warning or error usually means that a webpage is missing a header 1 HTML tag. The H1 tag is crucial for both user experience and search engine optimization (SEO).
+Common Reasons for Missing H1 Tags:
+Incorrect HTML Structure:
+Sometimes, web developers might forget to include the primary header or use it incorrectly.
+Multiple H1
+Tags:
+Some pages might have multiple main headings, which can confuse search engines and users. Each page should ideally have only one primary header.
+CSS Styling:
+Sometimes, styling issues might cause the H1 tag to be hidden or not rendered correctly.
+CMS Issues:
+Content Management Systems (CMS) might not automatically include the main heading in the page template, requiring manual addition.
+How to Check the Issue?
+To check this issue, you should look through the page’s source code. If the site is created with the help of WordPress, right-click on a blank space of the page and select “View page source”.
+To simplify this task, just use Sitechecker to find all pages without H1 on your site.
+After the audit, you will receive a list of pages with H1 missing. Feel free to use “View page code” feature.
+Detect pages where H1 is missing
+Crawl the website to collect all pages that have no H1 tags
+Something went wrong. Please, try again later.
+Check H1
+How to Fix the Issue?
+1. Add the H1 Tag
+Once you’ve identified the pages that lack a main heading, you can add it to the HTML of those pages. The H1 tag should clearly describe the main topic of the page.
+2. Ensure Only One H1 Tag per Page
+Each page should ideally have a single primary header to avoid confusion for search engines and users. If there are multiple main headings, modify the structure so that only the primary heading is an H1 tag, and other subheadings use H2, H3, etc.
+3. Check and Update CMS Templates
+If you are using a Content Management System (CMS), ensure that your page templates include an H1 tag by default. You might need to edit the template files or use a visual editor, depending on the CMS.
+For WordPress
+Edit the Template:
+Go to the theme editor (Appearance > Theme Editor).
+Locate the Template File:
+Open the template file where the main content is defined (e.g., single.php, page.php).
+Add the H1 Tag:
+Ensure the main heading is wrapped in an H1 tag.
+<article>
+<h1><?php the_title(); ?></h1>
+<div><?php the_content(); ?></div>
+</article>
+4. Test and Validate
+After making changes, test your pages to ensure the main header is correctly implemented and visible. Inspect the element to confirm the H1 tag’s presence. Re-crawl your site to check for the issue’s resolution. Use tools like WAVE or Axe to ensure accessibility compliance.
+Ivan Palii
+Head of Product at Sitechecker
+Ivan joined the team in 2018 and was the first to handle Sitechecker marketing. He had successful results in growing organic search traffic to B2B SaaS websites (Sitechecker, Copywritely).
+Read full bio
+Facebook
+Linkedin
+Related H1 Issues
+H1 Tag is Empty
+Multiple H1 Tags
+Duplicate H1
+Fast Links
+What Does the Issue Mean?
+How to Check the Issue
+How to Fix the Issue
+Share
+You may also like
+View More Posts
+Site Audit Issues
+Pages from Hreflang Group not being Crawled
+Iryna Krutko
+Oct 28, 2022
+Site Audit Issues
+How to Fix URLs with Meta Refresh Redirect
+Ivan Palii
+Aug 8, 2024
+Site Audit Issues
+How to Fix the HTTPS Links to HTTP Image Error
+Roman Rohoza
+Jul 30, 2025
+Check your website for SEO errors
+Go to app
+Enter your domain
+Start 14-day free trial
+No credit card needed
+Core Tools
+Website Crawler
+Website Monitoring
+Rank Tracker
+SEO Dashboard
+Search Console Dashboard
+AI Visibility Tool
+Top features
+White Label
+SEO Alerts
+SEO Experiments
+GA4+GSC Blended Report
+ChatGPT Visibility Tracker
+Gemini Visibility Tracker
+Perplexity Visibility Tracker
+AEO white-label tool
+API
+Why Sitechecker
+Semrush Alternative
+AgencyAnalytics Alternative
+Screaming Frog Alternative
+Ahrefs Alternative
+Sitebulb Alternative
+GSC Alternative
+Seobility Alternative
+SE Ranking Alternative
+SEOmonitor Alternative
+Peec Alternative
+Profound Alternative
+Promptwatch Alternative
+Ryte Alternative
+Company
+About Us
+Careers
+Contact
+Terms & Conditions
+Privacy Notice
+Reviews and Case Studies
+Educational Partnership
+Resources
+Blog
+Product Updates
+Features Roadmap
+Help Center
+Affiliate Program
+SEO Newsletter
+Reddit SEO Community
+Site Audit Issues
+Google Search Console Guides
+Interview with Experts
+API Documentation
+Follow us
+Language
+English
+© 2026 Sitechecker. All rights reserved.
+|
+sitechecker.pro is owned and operated by Cyber Circus Limited, Gibraltar, Main Street 5-9, GX11 1AA
+So, soon? Well, before you go…
+Get instant on-page SEO analysis of your home page
+Detect broken links
+Detect issues with content optimization
+Check PageSpeed for mobile and desktop
+Something went wrong. Please, try again later.
+Check
+You’ll get the report in 2 seconds without required signup
+Automate your on-page SEO routine
+Skip manual audits, see technical issues and GSC & GA4 performance while you browse.
+Add to Chrome for FREE
+Free • No sign-up • Works on any site

@@ -1,0 +1,40 @@
+SCORE 13.4/100   next=True router=app
+crawled=99 html=12 assets=87 orphans=5 indexable=12
+checks: 54 failed / 231 passed / 26 skipped  (of 311)
+severity: {'blocker': 1, 'critical': 5, 'warning': 14, 'opportunity': 4, 'notice': 30}
+strategies: {'streaming': 10, 'static': 2}
+
+TOP FINDINGS
+  [blocker    ] Suspense boundary never resolved — crawler received a sk  10 pg  3 boundary(ies) opened but never recei
+  [critical   ] More than one </html> tag on page                         10 pg  
+  [critical   ] More than one </body> tag on page                         10 pg  
+  [critical   ] Duplicate pages without canonical                          6 pg  content identical to 3 other page(s)
+  [critical   ] Orphan URLs - only found via sitemap                       5 pg  
+  [critical   ] Page has identical HTML id attributes                      1 pg  1 duplicate id(s): paint0_angular_25_2
+  [warning    ] Text to code ratio < 10%                                  12 pg  2.1%
+  [warning    ] Page has an anchored image with no alt text               12 pg  6 image link(s) without alt
+  [warning    ] Inline RSC flight payload dominates the HTML response     11 pg  226 KB = 62% of the response
+  [warning    ] Has an internal link with no anchor text                   9 pg  1 empty anchor(s)
+  [warning    ] Page has more than 100 internal links                      6 pg  192 internal links
+  [warning    ] Pages with slow load speed                                 6 pg  967 ms TTFB
+  [warning    ] Avoid excessive DOM size                                   5 pg  2272 nodes
+  [warning    ] Title too short                                            4 pg  22 chars
+  [warning    ] URL contains upper case characters                         3 pg  
+  [warning    ] Description is missing                                     2 pg  
+
+CATEGORY COVERAGE
+  Next.js               3 failed / 15 run  skipped=0  affected=100%
+  Links                13 failed / 34 run  skipped=0  affected=100%
+  Indexability          6 failed / 58 run  skipped=0  affected=825%
+  Content Relevance    14 failed / 40 run  skipped=0  affected=825%
+  Duplicate Content     1 failed / 17 run  skipped=0  affected=100%
+  Security              1 failed / 18 run  skipped=0  affected=92%
+  Internal              2 failed / 25 run  skipped=0  affected=100%
+  Page Speed            7 failed / 17 run  skipped=0  affected=100%
+  Redirects             0 failed / 12 run  skipped=0  affected=0%
+  Social Media          1 failed /  8 run  skipped=0  affected=67%
+  Code Validation       4 failed / 10 run  skipped=0  affected=100%
+  Search Traffic        2 failed /  2 run  skipped=9  affected=8%
+  Mobile Friendly       0 failed / 11 run  skipped=0  affected=0%
+  XML Sitemaps          0 failed / 12 run  skipped=0  affected=0%
+  Localization          0 failed /  6 run  skipped=17 affected=0%
