@@ -11,7 +11,7 @@ import { pageMeta } from '../meta.ts';
 
 export const instant = false;
 export const metadata = pageMeta({
-  title: 'AI visibility',
+  title: 'AI visibility in answer engines',
   description: 'Whether ChatGPT, Claude, Perplexity and Google’s AI answers can reach, read and understand your website — with the fixes, in order.',
   path: '/ai-visibility',
 });

@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // Include a short crawl id so each report's title is unique (two crawls of the
   // same site would otherwise share a title). Indexable with a self-canonical.
   return pageMeta({
-    title: `${host} audit · ${id.slice(0, 6)}`,
+    title: `Audit of ${host} · ${id.slice(0, 6)}`,
     description: `Technical health ${Math.round(report.score)}/100 for ${host} — ${report.counts?.checksFailed ?? 0} issues found across ${report.counts?.crawled ?? 0} pages.`,
     path: `/crawl/${id}`,
   });

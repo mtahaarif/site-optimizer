@@ -45,8 +45,11 @@ export function Summary({ report, embedded = false }: { report: AuditReport; emb
           ← Projects
         </Link>
         <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          {/* Leads with a word, not the hostname: a heading starting with a
+              bare lowercase domain reads as a fragment to both a person
+              skimming and a search engine building a snippet. */}
           <h1 className="text-[28px] font-bold tracking-tight">
-            {report.origin.replace(/^https?:\/\//, '')} · audit {new Date(report.createdAt).toLocaleString()}
+            Audit of {report.origin.replace(/^https?:\/\//, '')} · {new Date(report.createdAt).toLocaleString()}
           </h1>
           {report.isNext && (
             <span className="rounded border border-accent px-2 py-px font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-accent">

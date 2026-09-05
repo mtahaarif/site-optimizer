@@ -39,7 +39,7 @@ export default async function ProjectsPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-[30px] font-bold tracking-tight">Projects</h1>
+        <h1 className="text-[30px] font-bold tracking-tight">Your website projects</h1>
         <p className="mt-2 max-w-[68ch] text-[14px] leading-relaxed text-muted">
           Each website is one project. Audit it as many times as you like — every crawl adds to its
           history, so you can watch its health improve over time.

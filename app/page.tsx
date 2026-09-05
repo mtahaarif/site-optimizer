@@ -129,7 +129,7 @@ export default async function Dashboard() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line pb-4">
-        <h1 className="text-[26px] font-normal tracking-tight">Dashboard</h1>
+        <h1 className="text-[26px] font-normal tracking-tight">Your site at a glance</h1>
         <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
           {latest ? <>Last audit {fmtAgo(new Date(latest.createdAt).getTime())} · {latest.origin.replace(/^https?:\/\//, '')}</> : 'No audits yet'}
         </p>

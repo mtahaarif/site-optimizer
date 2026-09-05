@@ -9,7 +9,7 @@ import { pageMeta } from '../meta.ts';
 
 export const instant = false;
 export const metadata = pageMeta({
-  title: 'Content quality',
+  title: 'Content quality, page by page',
   description: 'An AI editor reads your pages and scores them on depth, originality and expertise — the things search engines actually reward.',
   path: '/content',
 });

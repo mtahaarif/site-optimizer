@@ -51,7 +51,7 @@ export default async function RanksPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-[30px] font-bold tracking-tight">Rankings</h1>
+        <h1 className="text-[30px] font-bold tracking-tight">Search rankings</h1>
         <p className="mt-2 max-w-[70ch] text-[14px] leading-relaxed text-muted">
           See where your website shows up in search — on Google, Bing, Yahoo and Yandex, for any
           phrase, in any city, on computer or phone. Save the phrases that matter and watch how

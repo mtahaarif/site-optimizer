@@ -48,7 +48,7 @@ export default async function BacklinksPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-[30px] font-bold tracking-tight">Backlinks</h1>
+        <h1 className="text-[30px] font-bold tracking-tight">Backlink monitoring</h1>
         <p className="mt-2 max-w-[72ch] text-[14px] leading-relaxed text-muted">
           Links from other websites to yours help your rankings. We re-check each one to confirm
           it&rsquo;s still there and still counts, and flag it if it disappears — that&rsquo;s the one worth

@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const raw = site ? site.origin.replace(/^https?:\/\//, '') : 'Project';
   const host = raw.length > 25 ? raw.slice(0, 25) + '…' : raw; // keep the title under 60 chars
   return pageMeta({
-    title: `${host} — audit history`,
+    title: `Audit history for ${host}`,
     description: `Audit history for ${host}: health over time, every failing check across crawls, and what changed since the first audit.`,
     path: `/project/${id}`,
   });
@@ -86,7 +86,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/projects" className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted hover:text-ink">← Projects</Link>
-          <h1 className="mt-3 text-[28px] font-normal tracking-tight">{host}</h1>
+          <h1 className="mt-3 text-[28px] font-normal tracking-tight">Audit history for {host}</h1>
           <p className="mt-1 font-mono text-[11.5px] text-muted">
             {history.length} {history.length === 1 ? 'audit' : 'audits'}
             {history.length > 0 && <> · since {new Date(history[0]!.created_at).toLocaleDateString()}</>}
