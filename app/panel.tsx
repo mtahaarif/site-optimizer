@@ -106,7 +106,7 @@ export function ActionRow({
 export function SitePicker({
   projects, selectedId, defaultId, base,
 }: {
-  projects: Array<{ siteId: number; origin: string }>;
+  projects: Array<{ siteId: number; origin: string; latestScore?: number | null }>;
   selectedId: number;
   defaultId: number;
   base: string;
@@ -119,7 +119,15 @@ export function SitePicker({
         <a key={p.siteId} href={p.siteId === defaultId ? base : `${base}?site=${p.siteId}`}
           className={'border px-3 py-1.5 text-[12.5px] no-underline transition-colors ' +
             (p.siteId === selectedId ? 'border-ink bg-ink text-ground' : 'border-line text-muted hover:border-ink hover:text-ink')}>
-          {p.origin.replace(/^https?:\/\//, '')}
+          {p.origin.replace(/^https?:\/\//, '')}{' '}
+          {/* The latest health score, which is genuinely useful when several
+              projects are open — and it makes the link text a phrase rather
+              than a bare hostname, which is all a one-word anchor amounts to. */}
+          {typeof p.latestScore === 'number' && (
+            <span className="tnum ml-1.5 font-mono text-[11px] opacity-70">
+              {p.latestScore.toFixed(0)}/100
+            </span>
+          )}
         </a>
       ))}
     </div>

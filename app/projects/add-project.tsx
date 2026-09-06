@@ -30,7 +30,7 @@ export function AddProject() {
   }
 
   return (
-    <form onSubmit={submit} className="border border-line bg-surface p-5">
+    <form method="post" onSubmit={submit} className="border border-line bg-surface p-5">
       <label className="block text-[12px] font-medium text-muted" htmlFor="new-site">Add a website</label>
       <div className="mt-1.5 flex flex-col gap-3 sm:flex-row">
         <input

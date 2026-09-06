@@ -56,7 +56,7 @@ export function CrawlForm({ initialUrl = '', lockUrl = false }: { initialUrl?: s
   const label = 'block font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-muted';
 
   return (
-    <form onSubmit={start} className="rounded border border-line bg-surface p-5">
+    <form method="post" onSubmit={start} className="rounded border border-line bg-surface p-5">
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="flex-1">
           <label className={label} htmlFor="url">Website address</label>

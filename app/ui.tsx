@@ -52,12 +52,12 @@ export function StatusChip({ status }: { status: 'failed' | 'passed' | 'skipped'
  * is what the `tags-with-style-attributes` check counts. `color` stays for the
  * places that genuinely need a value — SVG strokes and computed gradients.
  */
-export function scoreBand(score: number): { label: string; color: string; text: string } {
-  if (score >= 90) return { label: 'Excellent', color: 'rgb(var(--accent))', text: 'text-accent' };
-  if (score >= 75) return { label: 'Good', color: 'rgb(var(--accent))', text: 'text-accent' };
-  if (score >= 50) return { label: 'Needs work', color: 'rgb(var(--warning))', text: 'text-warning' };
-  if (score >= 25) return { label: 'Poor', color: 'rgb(var(--critical))', text: 'text-critical' };
-  return { label: 'Critical', color: 'rgb(var(--blocker))', text: 'text-blocker' };
+export function scoreBand(score: number): { label: string; color: string; text: string; stroke: string } {
+  if (score >= 90) return { label: 'Excellent', color: 'rgb(var(--accent))', text: 'text-accent', stroke: 'stroke-accent' };
+  if (score >= 75) return { label: 'Good', color: 'rgb(var(--accent))', text: 'text-accent', stroke: 'stroke-accent' };
+  if (score >= 50) return { label: 'Needs work', color: 'rgb(var(--warning))', text: 'text-warning', stroke: 'stroke-warning' };
+  if (score >= 25) return { label: 'Poor', color: 'rgb(var(--critical))', text: 'text-critical', stroke: 'stroke-critical' };
+  return { label: 'Critical', color: 'rgb(var(--blocker))', text: 'text-blocker', stroke: 'stroke-blocker' };
 }
 
 export function ScoreDial({ score, size = 148 }: { score: number; size?: number }) {
@@ -71,17 +71,17 @@ export function ScoreDial({ score, size = 148 }: { score: number; size?: number 
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
         <circle
           cx={size / 2} cy={size / 2} r={r}
-          fill="none" style={{ stroke: 'rgb(var(--line))' }} strokeWidth="8"
+          fill="none" className="stroke-line" strokeWidth="8"
         />
         <circle
           cx={size / 2} cy={size / 2} r={r}
-          fill="none" style={{ stroke: band.color }} strokeWidth="8" strokeLinecap="round"
+          fill="none" className={band.stroke} strokeWidth="8" strokeLinecap="round"
           strokeDasharray={`${filled} ${circumference}`}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="tnum text-[34px] font-bold leading-none tracking-tight" style={{ color: band.color }}>
+        <span className={'tnum text-[34px] font-bold leading-none tracking-tight ' + band.text}>
           {score.toFixed(0)}
         </span>
         <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.14em] text-muted">

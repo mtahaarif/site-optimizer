@@ -35,6 +35,16 @@ export interface GradeRow {
 const band = (n: number) =>
   n >= 75 ? 'rgb(var(--opportunity))' : n >= 50 ? 'rgb(var(--warning))' : 'rgb(var(--blocker))';
 
+// Same thresholds as `band`, as utility classes. Only the meter's width is a
+// computed value that has to travel in a style attribute; its colour, and every
+// score in the tables, is one of three fixed choices and belongs in the
+// stylesheet where the browser can share the rule.
+const bandText = (n: number) =>
+  n >= 75 ? 'text-opportunity' : n >= 50 ? 'text-warning' : 'text-blocker';
+
+const bandFill = (n: number) =>
+  n >= 75 ? 'bg-opportunity' : n >= 50 ? 'bg-warning' : 'bg-blocker';
+
 const shortUrl = (u: string, max = 46) => {
   try { const x = new URL(u); const s = x.pathname + x.search; return (s === '/' ? x.hostname : s).slice(0, max); }
   catch { return u.slice(0, max); }
@@ -45,10 +55,10 @@ function Bar({ label, value }: { label: string; value: number }) {
     <div>
       <div className="flex items-baseline justify-between">
         <span className="text-[11.5px] text-muted">{label}</span>
-        <span className="tnum text-[12px] font-medium" style={{ color: band(value) }}>{value}</span>
+        <span className={'tnum text-[12px] font-medium ' + bandText(value)}>{value}</span>
       </div>
       <div className="mt-1 h-[5px] bg-surface-2">
-        <div className="h-full" style={{ width: `${value}%`, background: band(value) }} />
+        <div className={'h-full ' + bandFill(value)} style={{ width: `${value}%` }} />
       </div>
     </div>
   );
@@ -203,7 +213,7 @@ export function ContentGrader({
                     </td>
                     <td className="tnum px-3 py-2.5 text-right text-muted">{p.words}</td>
                     <td className="tnum px-3 py-2.5 text-right">
-                      {g ? <span className="font-medium" style={{ color: band(g.overall) }}>{g.overall}</span>
+                      {g ? <span className={'font-medium ' + bandText(g.overall)}>{g.overall}</span>
                         : <span className="text-muted">—</span>}
                     </td>
                     <td className="max-w-[380px] px-3 py-2.5 text-muted">
@@ -236,7 +246,7 @@ export function ContentGrader({
                                 <ul className="mt-2 flex flex-col gap-1.5">
                                   {g.localFit.map((f, i) => (
                                     <li key={i} className="flex flex-wrap items-baseline gap-2">
-                                      <span className="tnum text-[13px] font-medium" style={{ color: band(f.score) }}>
+                                      <span className={'tnum text-[13px] font-medium ' + bandText(f.score)}>
                                         {f.score}
                                       </span>
                                       <span className="text-[13px] text-ink">{f.location}</span>

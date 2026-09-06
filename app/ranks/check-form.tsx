@@ -111,7 +111,7 @@ export function RankCheckForm({ savedLocations = [] }: { savedLocations?: string
         Type a phrase your customers search for and your website address to see where you show up.
       </p>
 
-      <form onSubmit={submit} className="mt-4 flex flex-col gap-4">
+      <form method="post" onSubmit={submit} className="mt-4 flex flex-col gap-4">
         {/* where to check */}
         <div>
           <span className={label}>Where to check</span>

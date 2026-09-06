@@ -10,8 +10,30 @@
  * params; the conversion happens once, here.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { Pool, type PoolClient } from 'pg';
+import { Pool, types, type PoolClient } from 'pg';
 import { MIGRATIONS } from './schema.ts';
+
+/**
+ * Return BIGINT as a JavaScript number.
+ *
+ * `pg` hands back int8 as a *string* by default, because a 64-bit integer can
+ * exceed Number.MAX_SAFE_INTEGER and it will not silently lose precision for
+ * you. That default is right in general and wrong for this schema: every
+ * BIGINT column here is a millisecond timestamp from Date.now(), which is
+ * around 1.8e12 — three orders of magnitude below the 9.0e15 safe ceiling, and
+ * staying there until the year 287396.
+ *
+ * Leaving it as a string is not a harmless type mismatch. Arithmetic coerces,
+ * so `Date.now() - created_at` and the graph's x-scale kept working, which is
+ * why this survived: the only thing that does *not* coerce is the Date
+ * constructor. `new Date('1788681357579')` is parsed as a date *string*, fails,
+ * and yields Invalid Date — so every formatted timestamp in the app rendered as
+ * "Invalid Date" while every computed one was fine.
+ *
+ * Registered once at module load, before any pool exists, so it applies to
+ * every connection this process opens.
+ */
+types.setTypeParser(types.builtins.INT8, (value) => Number(value));
 
 const conn = (): string | undefined =>
   process.env['POSTGRES_URL']

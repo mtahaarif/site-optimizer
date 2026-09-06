@@ -13,8 +13,8 @@ import { ScoreDial } from '../ui.tsx';
 import { MeterBar } from '../panel.tsx';
 import type { GradeRow } from './grader.tsx';
 
-const band = (n: number) =>
-  n >= 75 ? 'rgb(var(--opportunity))' : n >= 50 ? 'rgb(var(--warning))' : 'rgb(var(--blocker))';
+const bandText = (n: number) =>
+  n >= 75 ? 'text-opportunity' : n >= 50 ? 'text-warning' : 'text-blocker';
 
 const shortUrl = (u: string, max = 60) => {
   try { const x = new URL(u); const s = x.pathname + x.search; return (s === '/' ? x.hostname : s).slice(0, max); }
@@ -109,7 +109,7 @@ function PageSummary({ grade: g }: { grade: GradeRow }) {
     <article className="border border-line bg-ground p-5">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <h4 className="text-[13.5px] font-medium text-ink">{shortUrl(g.url)}</h4>
-        <span className="tnum text-[18px] font-medium" style={{ color: band(g.overall) }}>
+        <span className={'tnum text-[18px] font-medium ' + bandText(g.overall)}>
           {g.overall}
           <span className="text-[12px] text-muted">/100</span>
         </span>
@@ -132,7 +132,7 @@ function PageSummary({ grade: g }: { grade: GradeRow }) {
           <ul className="mt-2 flex flex-col gap-1.5">
             {g.localFit.map((f, i) => (
               <li key={i} className="flex flex-wrap items-baseline gap-2">
-                <span className="tnum text-[13px] font-medium" style={{ color: band(f.score) }}>{f.score}</span>
+                <span className={'tnum text-[13px] font-medium ' + bandText(f.score)}>{f.score}</span>
                 <span className="text-[13px] text-ink">{f.location}</span>
                 <span className="text-[12px] text-muted">{f.note}</span>
               </li>

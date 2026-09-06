@@ -362,7 +362,9 @@ export default async function Dashboard() {
         ]}
         footnote={<>Search traffic figures appear here only once Search Console and Google Analytics are
           connected on the Insights page. Until then the audit still runs in full; it just cannot weight pages
-          by real traffic, so it falls back to internal link equity alone.</>}
+          by real traffic, so it falls back to internal link equity alone. To keep these tiles current without
+          coming back to press anything, set up{' '}
+          <Link href="/schedule" className="text-accent hover:underline">automatic re-crawls and alerts</Link>.</>}
       />
     </div>
   );

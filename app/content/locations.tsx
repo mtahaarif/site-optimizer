@@ -53,8 +53,8 @@ interface Result {
 const key = (url: string, locationId: number) => `${locationId}::${url}`;
 
 /** Coverage is presence, not quality — the palette says "weak/partial/strong", nothing more. */
-const band = (n: number) =>
-  n >= 70 ? 'rgb(var(--opportunity))' : n >= 35 ? 'rgb(var(--warning))' : 'rgb(var(--blocker))';
+const bandText = (n: number) =>
+  n >= 70 ? 'text-opportunity' : n >= 35 ? 'text-warning' : 'text-blocker';
 
 export function LocationOptimiser({
   siteId, crawlId, pages, locations, cells: stored, aiConfigured,
@@ -313,7 +313,7 @@ export function LocationOptimiser({
                             <td key={l.id} className="tnum px-3 py-2.5 text-right">
                               {c === null
                                 ? <span className="text-muted">—</span>
-                                : <span className="font-medium" style={{ color: band(c) }}>{c}</span>}
+                                : <span className={'font-medium ' + bandText(c)}>{c}</span>}
                             </td>
                           );
                         })}
@@ -365,7 +365,7 @@ function PageDetail({
         <div key={loc.id} className="border-l-2 border-line pl-4">
           <div className="flex flex-wrap items-baseline gap-3">
             <h4 className="text-[13.5px] font-medium text-ink">{loc.label}</h4>
-            <span className="tnum font-mono text-[12px]" style={{ color: band(cell.coverage) }}>
+            <span className={'tnum font-mono text-[12px] ' + bandText(cell.coverage)}>
               {cell.coverage}/100
             </span>
           </div>
@@ -403,7 +403,7 @@ function PageDetail({
 
 function Signal({ on, label }: { on: boolean; label: string }) {
   return (
-    <li style={{ color: on ? 'rgb(var(--opportunity))' : 'rgb(var(--muted))' }}>
+    <li className={on ? 'text-opportunity' : 'text-muted'}>
       {on ? '✓' : '·'} {label}
     </li>
   );
