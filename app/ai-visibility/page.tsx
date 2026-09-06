@@ -83,11 +83,26 @@ export default async function AiVisibilityPage({
   const origin = report.origin.replace(/\/$/, '');
   const host = origin.replace(/^https?:\/\//, '');
 
+  // Two requests to somebody else's server, started here and awaited at the
+  // bottom. They were sitting in the middle of the database reads, so the page
+  // paid for them end to end; overlapped with that work they are usually free.
+  // `fetchText` resolves to null on any failure, so this promise never rejects
+  // and cannot become an unhandled rejection while it is in flight.
+  const liveChecks = Promise.all([
+    fetchText(origin + '/robots.txt'),
+    fetchText(origin + '/llms.txt'),
+  ]);
+
   // Answer engines are asked local questions constantly ("best X near me"), and
   // they answer from pages that actually name the place. So the location
   // coverage recorded on the content page belongs here too — as a summary per
   // place, not another matrix.
-  const locations = await listLocations(selected.siteId);
+  // Grades are needed further down and depend only on the crawl id, so they are
+  // read alongside the locations rather than after them.
+  const [locations, stored] = await Promise.all([
+    listLocations(selected.siteId),
+    gradesForCrawl(crawlId),
+  ]);
   const locationCells = locations.length ? await locationContentForSite(selected.siteId) : [];
   const locationStats = locations.map((l) => {
     const cells = locationCells.filter((c) => c.locationId === l.id);
@@ -105,14 +120,10 @@ export default async function AiVisibilityPage({
   const locationAverage = locationsChecked.length
     ? Math.round(locationsChecked.reduce((s, l) => s + (l.average ?? 0), 0) / locationsChecked.length)
     : null;
-  const [robotsText, llmsTxt] = await Promise.all([
-    fetchText(origin + '/robots.txt'),
-    fetchText(origin + '/llms.txt'),
-  ]);
+  const [robotsText, llmsTxt] = await liveChecks;
 
   // Content grades live on their own page, but they still feed the readiness
   // score — being reachable is worthless if nothing is worth quoting.
-  const stored = await gradesForCrawl(crawlId);
   const aeo = analyzeAeo({
     report, robotsText, llmsTxt,
     grades: stored.map((g) => ({ url: g.url, overall: g.overall })),

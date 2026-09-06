@@ -74,26 +74,33 @@ export default async function ContentPage({
       .sort((a, b) => b.pageRank - a.pageRank)
       .slice(0, 60)
     : [];
-  // One query for the whole set, not one per page: the pool holds a single
-  // connection, so sixty round trips to a remote database is a timeout.
-  const snapshots = crawlId ? await snapshotUrlKeys(crawlId) : new Set<string>();
+  // Everything below depends only on the crawl id or the site id, both of which
+  // are known by now — so it is read in one wave rather than five awaits in a
+  // row. Two of these (`snapshotUrlKeys`, `locationContentForSite`) are already
+  // single queries for a whole set; the win here is not issuing them one after
+  // another. See the note in snapshotUrlKeys about why per-row queries are not
+  // an option on a single pooled connection.
+  const [snapshots, rawLocations, rawCells, stored] = await Promise.all([
+    crawlId ? snapshotUrlKeys(crawlId) : Promise.resolve(new Set<string>()),
+    listLocations(selected.siteId),
+    locationContentForSite(selected.siteId),
+    crawlId ? gradesForCrawl(crawlId) : Promise.resolve([]),
+  ]);
+
   const pages: PageRow[] = candidates.map((p) => ({
     url: p.url, title: p.title, words: p.wordCount, pageRank: p.pageRank,
     hasSnapshot: snapshots.has(normalizeUrl(p.url)),
   }));
 
-  const locations: LocationRow[] = (await listLocations(selected.siteId))
-    .map((l) => ({ id: l.id, label: l.label }));
-  const cells: CellRow[] = (await locationContentForSite(selected.siteId))
-    .map((c) => ({
-      locationId: c.locationId, url: c.url, coverage: c.coverage, signals: c.signals,
-      verdict: c.verdict, recommendations: c.recommendations, draft: c.draft,
-      analysedAt: c.analysedAt, generatedAt: c.generatedAt,
-    }));
+  const locations: LocationRow[] = rawLocations.map((l) => ({ id: l.id, label: l.label }));
+  const cells: CellRow[] = rawCells.map((c) => ({
+    locationId: c.locationId, url: c.url, coverage: c.coverage, signals: c.signals,
+    verdict: c.verdict, recommendations: c.recommendations, draft: c.draft,
+    analysedAt: c.analysedAt, generatedAt: c.generatedAt,
+  }));
 
   // Worst-first, which is the order the summary and the weakest-page callout
   // both rely on.
-  const stored = crawlId ? await gradesForCrawl(crawlId) : [];
   const grades: GradeRow[] = stored.map((g) => ({
     url: g.url, overall: g.overall, depth: g.depth, relevance: g.relevance,
     readability: g.readability, originality: g.originality, trust: g.trust,
