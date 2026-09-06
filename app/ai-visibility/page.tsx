@@ -1,6 +1,6 @@
 import { connection } from 'next/server';
 import Link from 'next/link';
-import { listProjects, projectCrawls, loadReport } from '@/src/crawler/store.ts';
+import { projectCrawls, loadReport } from '@/src/crawler/store.ts';
 import { analyzeAeo, generateLlmsTxt } from '@/src/core/aeo/analyze.ts';
 import { gradesForCrawl } from '@/src/core/content/grade.ts';
 import { listLocations, locationContentForSite } from '@/src/core/locations/store.ts';
@@ -9,13 +9,37 @@ import { Section, MeterBar, ActionRow, SitePicker } from '../panel.tsx';
 import { LlmsFile } from './llms-file.tsx';
 import { Recheck } from './recheck.tsx';
 import { pageMeta } from '../meta.ts';
+import { PageNotes } from '../page-notes.tsx';
+import { auditedProjects, selectSite, canonicalPath } from '../selected-site.ts';
 
 export const instant = false;
-export const metadata = pageMeta({
-  title: 'AI visibility in answer engines',
-  description: 'Whether ChatGPT, Claude, Perplexity and Google’s AI answers can reach, read and understand your website — with the fixes, in order.',
-  path: '/ai-visibility',
-});
+
+const BASE = '/ai-visibility';
+
+/**
+ * Metadata is per website, not per route. The page shows one project's audit,
+ * so a shared static title would give `/ai-visibility` and
+ * `/ai-visibility?site=2` the same title, description and canonical while they
+ * render different sites — three duplicate-content findings for one cause.
+ */
+export async function generateMetadata(
+  { searchParams }: { searchParams: Promise<{ site?: string }> },
+) {
+  const projects = await auditedProjects();
+  if (projects.length === 0) {
+    return pageMeta({
+      title: 'AI visibility in answer engines',
+      description: 'Whether ChatGPT, Claude, Perplexity and Google’s AI answers can reach, read and understand your website — with the fixes, in order.',
+      path: BASE,
+    });
+  }
+  const sel = selectSite(projects, (await searchParams).site);
+  return pageMeta({
+    title: `AI visibility for ${sel.host}`,
+    description: `Whether ChatGPT, Claude, Perplexity and Google’s AI answers can reach, read and understand ${sel.host} — with the fixes, in order.`,
+    path: canonicalPath(BASE, sel),
+  });
+}
 
 async function fetchText(url: string, limit = 40_000): Promise<string | null> {
   try {
@@ -34,7 +58,7 @@ export default async function AiVisibilityPage({
   await connection();
   const { site } = await searchParams;
 
-  const projects = (await listProjects()).filter((p) => p.crawlCount > 0);
+  const projects = await auditedProjects();
   if (projects.length === 0) {
     return (
       <div className="flex flex-col gap-6">
@@ -47,8 +71,7 @@ export default async function AiVisibilityPage({
     );
   }
 
-  const selected = projects.find((p) => String(p.siteId) === site)
-    ?? projects.slice().sort((a, b) => (b.latestAt ?? 0) - (a.latestAt ?? 0))[0]!;
+  const { selected, fallback, isDefault } = selectSite(projects, site);
 
   const crawls = await projectCrawls(selected.siteId);
   const crawlId = crawls.length ? crawls[crawls.length - 1]!.id : null;
@@ -103,7 +126,7 @@ export default async function AiVisibilityPage({
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted">Answer engine optimisation</p>
           <h1 className="mt-2 max-w-[22ch] text-[32px] font-bold leading-[1.08] tracking-tight">
-            Can AI answers find you?
+            Can AI answers find {host}?
           </h1>
           <p className="mt-2 max-w-[74ch] text-[14px] leading-relaxed text-muted">
             ChatGPT, Claude, Perplexity and Google&rsquo;s AI answers only quote what they can reach and read.
@@ -114,7 +137,8 @@ export default async function AiVisibilityPage({
         <Recheck checkedAt={Date.now()} />
       </header>
 
-      <SitePicker projects={projects} selectedId={selected.siteId} base="/ai-visibility" />
+      <SitePicker projects={projects} selectedId={selected.siteId}
+        defaultId={fallback.siteId} base={BASE} />
 
       {/* ---- readiness ---- */}
       <div className="flex flex-col gap-8 border border-line bg-surface p-6 lg:flex-row lg:items-center">
@@ -191,8 +215,8 @@ export default async function AiVisibilityPage({
                       : c.source === 'wildcard' ? 'your “all crawlers” rule'
                         : 'no robots file — open by default'}
                   </td>
-                  <td className="px-6 py-2.5 text-right font-medium"
-                    style={{ color: c.allowed ? 'rgb(var(--opportunity))' : 'rgb(var(--blocker))' }}>
+                  <td className={'px-6 py-2.5 text-right font-medium '
+                    + (c.allowed ? 'text-opportunity' : 'text-blocker')}>
                     {c.allowed ? 'Allowed' : 'Blocked'}
                   </td>
                 </tr>
@@ -230,8 +254,8 @@ export default async function AiVisibilityPage({
                     </td>
                     <td className="tnum px-4 py-2.5 text-right text-muted">{Math.round(p.serverTextLength / 5.5)}</td>
                     <td className="tnum px-4 py-2.5 text-right text-muted">{p.wordCount}</td>
-                    <td className="tnum px-6 py-2.5 text-right font-medium"
-                      style={{ color: p.serverShare < 0.25 ? 'rgb(var(--blocker))' : 'rgb(var(--warning))' }}>
+                    <td className={'tnum px-6 py-2.5 text-right font-medium '
+                      + (p.serverShare < 0.25 ? 'text-blocker' : 'text-warning')}>
                       {Math.round(p.serverShare * 100)}%
                     </td>
                   </tr>
@@ -317,10 +341,9 @@ export default async function AiVisibilityPage({
                     <span className="text-[12.5px] text-muted">
                       {l.average === null ? 'not checked yet' : (
                         <>
-                          <span className="tnum font-mono" style={{
-                            color: l.average >= 70 ? 'rgb(var(--opportunity))'
-                              : l.average >= 35 ? 'rgb(var(--warning))' : 'rgb(var(--blocker))',
-                          }}>{l.average}/100</span>
+                          <span className={'tnum font-mono '
+                            + (l.average >= 70 ? 'text-opportunity'
+                              : l.average >= 35 ? 'text-warning' : 'text-blocker')}>{l.average}/100</span>
                           {' '}across {l.checked} {l.checked === 1 ? 'page' : 'pages'}
                           {l.weak > 0 && <> · {l.weak} barely {l.weak === 1 ? 'mentions' : 'mention'} it</>}
                         </>
@@ -337,7 +360,7 @@ export default async function AiVisibilityPage({
             </>
           )}
           <div>
-            <Link href={`/content?site=${selected.siteId}`}
+            <Link href={canonicalPath('/content', { selected, isDefault })}
               className="inline-block border border-ink bg-ink px-5 py-2 text-[13px] font-medium text-ground no-underline transition-opacity hover:opacity-90">
               {locations.length === 0 ? 'Add your locations →' : 'Open location content →'}
             </Link>
@@ -349,6 +372,33 @@ export default async function AiVisibilityPage({
         Access and llms.txt are checked live each time you open or re-check this page. Page readability comes from
         the latest audit.
       </p>
+
+      <PageNotes
+        title="Why answer engines are a separate problem"
+        intro={<>Being indexed by Google and being quotable by an answer engine are not the same achievement, and
+          a site can be excellent at one while invisible to the other. The differences are few but they are
+          absolute, and each of them is a yes-or-no fact about your site rather than a matter of degree.</>}
+        items={[
+          { term: 'They mostly do not run JavaScript', body: <>Googlebot renders; most answer-engine crawlers do
+            not. A page that fetches its content in the browser returns an empty shell to them, so the words a
+            visitor praises are words the model never received.</> },
+          { term: 'They are blocked by name', body: <>GPTBot, ClaudeBot, PerplexityBot and the rest each read their
+            own token in robots.txt. A blanket rule written years ago for scrapers now excludes the engines
+            answering your customers&rsquo; questions, usually without anyone deciding that.</> },
+          { term: 'They quote passages, not pages', body: <>A citation is lifted from a few sentences that answer
+            the question cleanly on their own. Content that only makes sense after three paragraphs of build-up
+            has nothing liftable in it, however well it ranks.</> },
+          { term: 'llms.txt is a summary, not a permission', body: <>A short file at your root naming what you do
+            and which pages matter. It grants no access and blocks nothing &mdash; robots.txt still decides that &mdash; but
+            it gives a model a map instead of leaving it to infer one.</> },
+          { term: 'Local questions are their bread and butter', body: <>A large share of what people ask assistants
+            is implicitly local. Engines answer those from pages that actually name the place, which is why the
+            location coverage from the content page is summarised here too.</> },
+        ]}
+        footnote={<>Fix these in the order shown above. The list is ranked by how completely each item blocks a
+          citation, so the first entry is worth more than the rest combined &mdash; there is no partial credit for
+          being readable if you are not reachable.</>}
+      />
     </div>
   );
 }

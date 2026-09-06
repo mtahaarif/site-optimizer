@@ -158,6 +158,15 @@ export interface PageData {
   hasAdminAuthor: boolean;
   lastModified: string | null;
 
+  /**
+   * True when this row is a sub-resource the crawler fetched to size it (a
+   * stylesheet, script or image referenced by a page) rather than a URL the
+   * site publishes as content. Status and transport checks still apply to
+   * these — a 404 stylesheet is a real finding — but content checks must not,
+   * or every bundler chunk is reported as a page needing a title.
+   */
+  isSubresource: boolean;
+
   // ---- links / assets -----------------------------------------------------
   links: LinkRecord[];
   images: ImageRecord[];
@@ -217,6 +226,8 @@ export interface ExtractInput {
   fetchError?: string | null;
   timedOut?: boolean;
   depth?: number;
+  /** set for stylesheets, scripts and images fetched by the asset pass */
+  isSubresource?: boolean;
   /** set when `html` is post-hydration DOM rather than the raw response */
   renderedWithJs?: boolean;
   jsConsoleErrors?: string[];
@@ -630,6 +641,8 @@ export function extractPage(input: ExtractInput): PageData {
     hasAdminAuthor: /(?:by|author)[:\s]+admin\b/i.test(bodyText),
     lastModified: headers['last-modified'] ?? null,
 
+    isSubresource: input.isSubresource ?? false,
+
     links,
     images,
     scripts,
@@ -685,6 +698,7 @@ function emptyPage(i: ExtractInput, contentType: string, bytes: number, isHtml: 
     textToCodeRatio: 0, paragraphCount: 0, listCount: 0, strongCount: 0, commentBytes: 0,
     hasLoremIpsum: false, hasPhpError: false, hasCaptcha: false, hasAdminAuthor: false,
     lastModified: i.headers['last-modified'] ?? null,
+    isSubresource: i.isSubresource ?? false,
     links: [], images: [], scripts: [], stylesheets: [],
     domNodes: 0, domDepth: 0, domMaxWidth: 0, styleAttrCount: 0, duplicateIds: [],
     tables: [], forms: [], gtmCodes: [], gtmInBody: false, mapTagCount: 0,

@@ -527,7 +527,9 @@ const structureChecks: PageCheck[] = [
     category: 'indexability', severity: 'notice',
     why: 'A non-HTML content type on a page expected to be a document means it will not be parsed or indexed as one.',
     fix: 'Set Content-Type: text/html; charset=utf-8 for HTML responses.',
-    appliesTo: (p) => p.status === 200,
+    // A stylesheet correctly served as text/css is not a page with the wrong
+    // content type. See the note on fileTypeChecks in content.ts.
+    appliesTo: (p) => p.status === 200 && !p.isSubresource,
     test: (p) => !p.isHtml ? p.contentType || 'no content-type' : false,
   }),
   pageCheck({

@@ -1,6 +1,6 @@
 import { connection } from 'next/server';
 import Link from 'next/link';
-import { listProjects, projectCrawls, loadReport, snapshotUrlKeys } from '@/src/crawler/store.ts';
+import { projectCrawls, loadReport, snapshotUrlKeys } from '@/src/crawler/store.ts';
 import { gradesForCrawl, llmConfigured, activeProvider } from '@/src/core/content/grade.ts';
 import { SitePicker } from '../panel.tsx';
 import type { PageRow, GradeRow } from './grader.tsx';
@@ -10,13 +10,32 @@ import { ContentWorkbench } from './workbench.tsx';
 import { listLocations, locationContentForSite } from '@/src/core/locations/store.ts';
 import { normalizeUrl } from '@/src/core/extract.ts';
 import { pageMeta } from '../meta.ts';
+import { PageNotes } from '../page-notes.tsx';
+import { auditedProjects, selectSite, canonicalPath } from '../selected-site.ts';
 
 export const instant = false;
-export const metadata = pageMeta({
-  title: 'Content quality, page by page',
-  description: 'An AI editor reads your pages and scores them on depth, originality and expertise — the things search engines actually reward.',
-  path: '/content',
-});
+
+const BASE = '/content';
+
+/** Per website, for the reasons set out in ai-visibility/page.tsx. */
+export async function generateMetadata(
+  { searchParams }: { searchParams: Promise<{ site?: string }> },
+) {
+  const projects = await auditedProjects();
+  if (projects.length === 0) {
+    return pageMeta({
+      title: 'Content quality, page by page',
+      description: 'An AI editor reads your pages and scores them on depth, originality and expertise — the things search engines actually reward.',
+      path: BASE,
+    });
+  }
+  const sel = selectSite(projects, (await searchParams).site);
+  return pageMeta({
+    title: `Content quality for ${sel.host}`,
+    description: `An AI editor reads every page on ${sel.host} and scores it on depth, originality and expertise — the things search engines actually reward.`,
+    path: canonicalPath(BASE, sel),
+  });
+}
 
 export default async function ContentPage({
   searchParams,
@@ -26,7 +45,7 @@ export default async function ContentPage({
 
   const configured = llmConfigured();
   const provider = activeProvider();
-  const projects = (await listProjects()).filter((p) => p.crawlCount > 0);
+  const projects = await auditedProjects();
 
   if (projects.length === 0) {
     return (
@@ -40,8 +59,7 @@ export default async function ContentPage({
     );
   }
 
-  const selected = projects.find((p) => String(p.siteId) === site)
-    ?? projects.slice().sort((a, b) => (b.latestAt ?? 0) - (a.latestAt ?? 0))[0]!;
+  const { selected, fallback } = selectSite(projects, site);
 
   const crawls = await projectCrawls(selected.siteId);
   const crawlId = crawls.length ? crawls[crawls.length - 1]!.id : null;
@@ -91,7 +109,7 @@ export default async function ContentPage({
       <header>
         <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted">Content quality</p>
         <h1 className="mt-2 max-w-[24ch] text-[32px] font-bold leading-[1.08] tracking-tight">
-          Is your writing worth quoting?
+          Is the writing on {host} worth quoting?
         </h1>
         <p className="mt-2 max-w-[76ch] text-[14px] leading-relaxed text-muted">
           Every other check asks whether a page is <em>built</em> well. This one asks whether it is worth
@@ -100,7 +118,8 @@ export default async function ContentPage({
         </p>
       </header>
 
-      <SitePicker projects={projects} selectedId={selected.siteId} base="/content" />
+      <SitePicker projects={projects} selectedId={selected.siteId}
+        defaultId={fallback.siteId} base={BASE} />
 
       <ContentWorkbench
         siteId={selected.siteId}
@@ -120,6 +139,40 @@ export default async function ContentPage({
         Re-run an audit and grade again to see whether a rewrite improved a page.
         {provider && <> Grading with <span className="font-mono text-ink">{provider.model}</span> via {provider.label}.</>}
       </p>
+
+      <PageNotes
+        title="What a grade here actually measures"
+        intro={<>Every other check in this tool inspects markup. This one reads the words, which means it is the
+          only score here that a crawler could never produce on its own &mdash; and the only one that maps onto what
+          a reader, or a model deciding whether to quote you, is actually reacting to.</>}
+        items={[
+          { term: 'Depth', body: <>Whether the page answers its question completely or stops at the summary.
+            Thin pages are not penalised for being short; they are penalised for leaving the obvious follow-up
+            question unanswered, which is what sends a reader back to the results.</> },
+          { term: 'Originality', body: <>Whether the page says anything that is not on the ten pages that already
+            rank for the same phrase. Reworded consensus is the most common failure mode and the hardest to see
+            from the inside, because it reads perfectly well.</> },
+          { term: 'Expertise', body: <>Evidence that someone who has actually done the thing wrote it: specifics,
+            numbers, named trade-offs, the failure cases. Claims of authority count for nothing here; only the
+            detail that would be expensive to fake does.</> },
+          { term: 'Structure and readability', body: <>Whether a reader can find the answer by scanning, and
+            whether a model can lift a clean passage out of the page. Both come down to headings that describe
+            their sections and paragraphs that make one point each.</> },
+          { term: 'Location coverage', body: <>How well each page names the places you actually serve. This counts
+            mentions across the title, headings, body, URL and local schema &mdash; it does not judge whether the page
+            is good. The same copy repeated per city is a doorway page, and search engines penalise it.</> },
+          { term: 'Search intent', body: <>Which of the four intents a page reads as &mdash; informational,
+            commercial, transactional or navigational &mdash; and whether that matches what the phrase it targets
+            actually wants. A buying-guide page competing against product pages is not a writing problem,
+            and no amount of rewriting fixes it.</> },
+          { term: 'Why word count is not scored', body: <>Length is an output of covering a topic, never an
+            input. A 400-word page that answers the question completely outscores a 2,000-word one that
+            circles it, and padding to hit a target is the single most common way to make a page worse.</> },
+        ]}
+        footnote={<>Grades are a second opinion, not a verdict. Read the specific fixes for a page before acting
+          on its number, and re-grade after a rewrite: the comparison between two grades of the same page is far
+          more informative than either grade on its own.</>}
+      />
     </div>
   );
 }

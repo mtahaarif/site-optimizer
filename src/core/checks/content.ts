@@ -335,13 +335,21 @@ const imageChecks: PageCheck[] = [
   }),
 ];
 
+/**
+ * These ask "should this URL be in the index at all?", which is a question
+ * about documents the site publishes and links to — a PDF price list, a
+ * spreadsheet. It is not a question about the stylesheets and script chunks a
+ * page pulls in to render itself: those are fetched here only to size them and
+ * catch broken references, and reporting a bundler chunk as a URL that needs
+ * "an HTML landing page" is noise on every bundled site. Hence `isSubresource`.
+ */
 const fileTypeChecks: PageCheck[] = [
   pageCheck({
     id: 'non-html-urls', title: 'Non-HTML URLs',
     category: 'content-relevance', severity: 'notice',
     why: 'Non-HTML resources in the crawl are indexable but cannot carry standard on-page signals such as titles and headings.',
     fix: 'Confirm these should be indexed. Provide an HTML landing page for important documents.',
-    appliesTo: (p) => p.status === 200,
+    appliesTo: (p) => p.status === 200 && !p.isSubresource,
     test: (p) => !p.isHtml ? p.contentType : false,
   }),
   pageCheck({
@@ -349,7 +357,7 @@ const fileTypeChecks: PageCheck[] = [
     category: 'content-relevance', severity: 'notice',
     why: 'PDFs rank but convert poorly, are hard to read on mobile, and cannot be updated without replacing the file.',
     fix: 'Publish an HTML version and link the PDF as a download.',
-    appliesTo: (p) => p.status === 200,
+    appliesTo: (p) => p.status === 200 && !p.isSubresource,
     test: (p) => p.contentType.includes('pdf') || /\.pdf($|\?)/i.test(p.finalUrl),
   }),
 ];

@@ -12,11 +12,16 @@ const THEME_INIT = `(function(){try{var t=localStorage.getItem('theme');if(t!=='
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
 
-// Bundled fallback for Apercu. Kept light-weighted to match the Thin house face;
-// once the licensed Apercu woff2 lands in public/fonts/ it takes precedence.
+// Bundled fallback for Apercu. Once the licensed Apercu woff2 lands in
+// public/fonts/ it takes precedence.
+//
+// Only the three weights the interface actually uses are requested. Each weight
+// costs seven @font-face blocks (one per unicode-range subset) in the stylesheet
+// plus its own font file, and 300 and 600 were declared without a single
+// `font-light` or `font-semibold` anywhere in the app.
 const fallback = Inter({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '700'],
   variable: '--font-sans-fallback',
 });
 

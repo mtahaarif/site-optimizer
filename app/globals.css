@@ -117,3 +117,61 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * The theme collapses every `rounded*` utility to a square corner, which is the
+ * point of the design — but the floating theme toggle is a disc, and it was
+ * getting its curve from an inline style on every page. One rule here instead.
+ */
+.circle {
+  border-radius: 9999px;
+}
+
+/*
+ * The sidebar is the only markup that renders on all twelve routes, and its
+ * utility strings were the single largest repeated span in every response —
+ * roughly 2.8 KB per page, counted twice because App Router also serialises the
+ * tree into the inline RSC payload. Collapsing them into component classes is
+ * the same design expressed once in the stylesheet, which the browser caches,
+ * instead of once per element in every document.
+ */
+@layer components {
+  .nav-rail {
+    @apply sticky top-0 z-20 flex h-screen w-[64px] shrink-0 flex-col border-r border-line bg-surface lg:w-[220px];
+  }
+  .nav-brand {
+    @apply flex h-[60px] items-center gap-2.5 border-b border-line px-4 no-underline;
+  }
+  .nav-mark {
+    @apply grid h-7 w-7 shrink-0 place-items-center border border-ink text-[13px] font-normal text-ink;
+  }
+  .nav-wordmark {
+    @apply text-[14px] font-normal tracking-tight text-ink;
+  }
+  .nav-item {
+    /* `group` is a marker class Tailwind cannot @apply, and nothing here used a
+       group-* variant — the active marker keys off aria-current instead. */
+    @apply relative mx-2 flex items-center gap-3 px-3 py-2.5 text-muted no-underline transition-colors hover:bg-surface-2 hover:text-ink;
+  }
+  .nav-item[aria-current='page'] {
+    @apply bg-surface-2 text-ink;
+  }
+  .nav-marker {
+    @apply absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-ink opacity-0 transition-opacity;
+  }
+  .nav-item[aria-current='page'] .nav-marker {
+    @apply opacity-100;
+  }
+  .nav-icon {
+    @apply grid h-[18px] w-[18px] shrink-0 place-items-center;
+  }
+  .nav-label {
+    @apply hidden text-[13px] font-normal lg:block;
+  }
+  .nav-foot {
+    @apply hidden border-t border-line px-4 py-3 lg:block;
+  }
+  .nav-foot p {
+    @apply font-mono text-[9px] uppercase leading-relaxed tracking-[0.12em] text-muted;
+  }
+}

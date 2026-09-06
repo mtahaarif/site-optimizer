@@ -11,6 +11,7 @@ import { backlinkSummary } from '@/src/backlinks/verify.ts';
 import { ScoreDial, scoreBand, shortUrl, SEVERITY_ORDER, SEVERITY_LABEL } from './ui.tsx';
 import type { Severity } from '@/src/core/scoring/model.ts';
 import { pageMeta } from './meta.ts';
+import { PageNotes } from './page-notes.tsx';
 
 // Reads live data from Postgres, so there is no static shell to prerender.
 export const instant = false;
@@ -24,12 +25,22 @@ export const metadata = pageMeta({
   path: '/',
 });
 
-const SEVERITY_COLOR: Record<Severity, string> = {
-  blocker: 'rgb(var(--blocker))',
-  critical: 'rgb(var(--critical))',
-  warning: 'rgb(var(--warning))',
-  opportunity: 'rgb(var(--opportunity))',
-  notice: 'rgb(var(--notice))',
+// Utility classes, not inline colours: these render ten times on the page and a
+// shared rule costs the response far less than ten style attributes.
+const SEVERITY_TEXT: Record<Severity, string> = {
+  blocker: 'text-blocker',
+  critical: 'text-critical',
+  warning: 'text-warning',
+  opportunity: 'text-opportunity',
+  notice: 'text-notice',
+};
+
+const SEVERITY_BG: Record<Severity, string> = {
+  blocker: 'bg-blocker',
+  critical: 'bg-critical',
+  warning: 'bg-warning',
+  opportunity: 'bg-opportunity',
+  notice: 'bg-notice',
 };
 
 function fmtAgo(ts: number): string {
@@ -155,7 +166,7 @@ export default async function Dashboard() {
                 <div className="mt-4 flex flex-wrap gap-1.5">
                   {SEVERITY_ORDER.map((sev) => (
                     <span key={sev} className="inline-flex items-center gap-1.5 border border-line px-2 py-1">
-                      <span className="h-2 w-2" style={{ background: SEVERITY_COLOR[sev] }} />
+                      <span className={'h-2 w-2 ' + SEVERITY_BG[sev]} />
                       <span className="tnum font-mono text-[11px] text-ink">{report.severity?.[sev] ?? 0}</span>
                       <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-muted">
                         {SEVERITY_LABEL[sev]}
@@ -202,7 +213,7 @@ export default async function Dashboard() {
             <div className="grid flex-1 grid-cols-5 gap-2">
               {SEVERITY_ORDER.map((sev) => (
                 <div key={sev} className="flex flex-col justify-end border-l border-line pl-2">
-                  <div className="tnum text-[26px] font-normal leading-none" style={{ color: SEVERITY_COLOR[sev] }}>
+                  <div className={'tnum text-[26px] font-normal leading-none ' + SEVERITY_TEXT[sev]}>
                     {report.severity?.[sev] ?? 0}
                   </div>
                   <div className="mt-1.5 font-mono text-[8.5px] uppercase tracking-[0.08em] text-muted">
@@ -321,6 +332,38 @@ export default async function Dashboard() {
           </Widget>
         )}
       </div>
+
+      <PageNotes
+        title="How to read this dashboard"
+        intro={<>Every tile above is the headline number from one part of the tool, taken from the most
+          recent run. None of them is a ranking prediction: this dashboard measures how well your site is
+          built, how visible it currently is, and what changed since last time. Open any tile to get the
+          page-by-page detail behind it.</>}
+        items={[
+          { term: 'Technical health', body: <>A 0&ndash;100 score from the last audit, on a fixed rubric, so two
+            crawls of the same site are directly comparable. Blockers and critical issues dominate it;
+            cosmetic notices barely move it. A score that falls without you changing anything usually means
+            a new page shipped with a defect the rest of the site does not have.</> },
+          { term: 'Worst pages', body: <>The pages carrying the most damage, weighted by how important they are
+            &mdash; internal link equity, search impressions and analytics sessions. Fixing the top of this list is
+            worth more than clearing a long tail of notices on pages nobody reaches.</> },
+          { term: 'Search rankings', body: <>Where your saved phrases currently place across Google, Bing, Yahoo and
+            Yandex, and how far each one moved since the previous check. Positions are pulled per city and per
+            device, because both change the result far more than most people expect.</> },
+          { term: 'AI visibility', body: <>Whether answer engines can reach, read and quote you. Most of them never
+            run JavaScript, so a page that assembles itself in the browser is invisible to them however good it
+            looks to a visitor.</> },
+          { term: 'Backlinks', body: <>Links from other sites that are still live, and the ones that have
+            disappeared since the last check. A lost link from a strong domain is the single most actionable
+            item on this screen, because it is usually recoverable with one email.</> },
+          { term: 'Framework', body: <>What the site is built with, detected from the response rather than declared.
+            On Next.js the audit adds a pack of framework-specific checks &mdash; rendering strategy, payload weight,
+            caching headers &mdash; that a generic crawler cannot report.</> },
+        ]}
+        footnote={<>Search traffic figures appear here only once Search Console and Google Analytics are
+          connected on the Insights page. Until then the audit still runs in full; it just cannot weight pages
+          by real traffic, so it falls back to internal link equity alone.</>}
+      />
     </div>
   );
 }

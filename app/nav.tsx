@@ -39,67 +39,52 @@ const ICON = {
   ),
 };
 
+// Labels name what the section does rather than what it is called internally.
+// Two words each, deliberately: this nav is the only set of internal links on
+// every page, and a one-word anchor repeated site-wide passes almost no signal
+// about its destination — the `outgoing-one-word-anchor` finding in our own
+// audit. Being clearer to a first-time user is the same change.
 const ITEMS: Item[] = [
-  { href: '/', label: 'Dashboard', icon: ICON.dashboard, match: (p) => p === '/' },
-  { href: '/projects', label: 'Projects', icon: ICON.crawl, match: (p) => p.startsWith('/project') || p === '/crawls' || p.startsWith('/crawl/') },
-  { href: '/insights', label: 'Insights', icon: ICON.insights, match: (p) => p.startsWith('/insights') },
+  { href: '/', label: 'Site dashboard', icon: ICON.dashboard, match: (p) => p === '/' },
+  { href: '/projects', label: 'Your projects', icon: ICON.crawl, match: (p) => p.startsWith('/project') || p === '/crawls' || p.startsWith('/crawl/') },
+  { href: '/insights', label: 'Search insights', icon: ICON.insights, match: (p) => p.startsWith('/insights') },
   { href: '/ai-visibility', label: 'AI visibility', icon: ICON.aivis, match: (p) => p.startsWith('/ai-visibility') },
-  { href: '/content', label: 'Content', icon: ICON.content, match: (p) => p.startsWith('/content') },
-  { href: '/ranks', label: 'Ranks', icon: ICON.ranks, match: (p) => p.startsWith('/ranks') },
-  { href: '/backlinks', label: 'Backlinks', icon: ICON.backlinks, match: (p) => p.startsWith('/backlinks') },
-  { href: '/schedule', label: 'Schedule', icon: ICON.schedule, match: (p) => p.startsWith('/schedule') },
+  { href: '/content', label: 'Content quality', icon: ICON.content, match: (p) => p.startsWith('/content') },
+  { href: '/ranks', label: 'Rank tracking', icon: ICON.ranks, match: (p) => p.startsWith('/ranks') },
+  { href: '/backlinks', label: 'Backlink monitor', icon: ICON.backlinks, match: (p) => p.startsWith('/backlinks') },
+  { href: '/schedule', label: 'Schedule & alerts', icon: ICON.schedule, match: (p) => p.startsWith('/schedule') },
 ];
 
 export function Sidebar() {
   const pathname = usePathname() || '/';
 
   return (
-    <aside className="sticky top-0 z-20 flex h-screen w-[64px] shrink-0 flex-col border-r border-line bg-surface lg:w-[220px]">
-      <Link
-        href="/"
-        className="flex h-[60px] items-center gap-2.5 border-b border-line px-4 no-underline"
-      >
-        <span className="grid h-7 w-7 shrink-0 place-items-center border border-ink text-[13px] font-normal text-ink">
-          S
-        </span>
+    <aside className="nav-rail">
+      <Link href="/" className="nav-brand">
+        <span aria-hidden="true" className="nav-mark">S</span>{' '}
         <span className="hidden flex-col leading-none lg:flex">
-          <span className="text-[14px] font-normal tracking-tight text-ink">SiteOptimizer</span>
+          <span className="nav-wordmark">Site Optimizer</span>
         </span>
       </Link>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto py-3">
-        {ITEMS.map((it) => {
-          const active = it.match(pathname);
-          return (
-            <Link
-              key={it.href}
-              href={it.href}
-              aria-current={active ? 'page' : undefined}
-              title={it.label}
-              className={
-                'group relative mx-2 flex items-center gap-3 px-3 py-2.5 no-underline transition-colors ' +
-                (active
-                  ? 'bg-surface-2 text-ink'
-                  : 'text-muted hover:bg-surface-2 hover:text-ink')
-              }
-            >
-              <span
-                className={
-                  'absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-ink transition-opacity ' +
-                  (active ? 'opacity-100' : 'opacity-0')
-                }
-              />
-              <span className="grid h-[18px] w-[18px] shrink-0 place-items-center">{it.icon}</span>
-              <span className="hidden text-[13px] font-normal lg:block">{it.label}</span>
-            </Link>
-          );
-        })}
+        {ITEMS.map((it) => (
+          <Link
+            key={it.href}
+            href={it.href}
+            aria-current={it.match(pathname) ? 'page' : undefined}
+            title={it.label}
+            className="nav-item"
+          >
+            <span className="nav-marker" />
+            <span className="nav-icon">{it.icon}</span>
+            <span className="nav-label">{it.label}</span>
+          </Link>
+        ))}
       </nav>
 
-      <div className="hidden border-t border-line px-4 py-3 lg:block">
-        <p className="font-mono text-[9px] uppercase leading-relaxed tracking-[0.12em] text-muted">
-          Next.js · Postgres
-        </p>
+      <div className="nav-foot">
+        <p>Next.js · Postgres</p>
       </div>
     </aside>
   );

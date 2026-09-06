@@ -77,15 +77,11 @@ const ago = (ms: number): string => {
 function Status({ ok }: { ok: boolean }) {
   return (
     <span
-      className="inline-flex shrink-0 items-center gap-1.5 border px-2 py-0.5 text-[11px] font-medium"
-      style={{
-        color: ok ? 'rgb(var(--opportunity))' : 'rgb(var(--muted))',
-        borderColor: ok ? 'rgb(var(--opportunity))' : 'rgb(var(--line))',
-      }}
+      className={'inline-flex shrink-0 items-center gap-1.5 border px-2 py-0.5 text-[11px] font-medium '
+        + (ok ? 'text-opportunity border-opportunity' : 'text-muted border-line')}
     >
       <span
-        className="h-1.5 w-1.5 rounded-full"
-        style={{ background: ok ? 'rgb(var(--opportunity))' : 'rgb(var(--muted))' }}
+        className={'h-1.5 w-1.5 rounded-full ' + (ok ? 'bg-opportunity' : 'bg-muted')}
       />
       {ok ? 'Connected' : 'Not connected'}
     </span>

@@ -370,6 +370,7 @@ export async function crawl(
             url, finalUrl: r.finalUrl, status: r.status, headers: r.headers, html: '',
             redirectChain: r.redirectChain, ttfbMs: r.ttfbMs, totalMs: r.totalMs,
             timedOut: r.timedOut, fetchError: r.error, depth: 99,
+            isSubresource: true,
           });
         }));
         for (const a of results) {

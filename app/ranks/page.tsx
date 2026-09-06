@@ -7,6 +7,7 @@ import { Stat, Bar } from '../ui.tsx';
 import { RankCheckForm } from './check-form.tsx';
 import { RefreshTracked } from './refresh-tracked.tsx';
 import { pageMeta } from '../meta.ts';
+import { PageNotes } from '../page-notes.tsx';
 
 // Reads live data from Postgres, so there is no static shell to prerender.
 export const instant = false;
@@ -31,7 +32,7 @@ function Movement({ pos, prev }: { pos: number | null; prev: number | null }) {
   if (pos === prev) return <span className="text-muted">—</span>;
   const better = pos < prev;
   return (
-    <span style={{ color: better ? 'rgb(var(--accent))' : 'rgb(var(--blocker))' }}>
+    <span className={better ? 'text-accent' : 'text-blocker'}>
       {better ? '▲' : '▼'} {Math.abs(prev - pos)}
     </span>
   );
@@ -160,10 +161,10 @@ DATAFORSEO_PASSWORD=...</pre>
               <tbody className="tnum">
                 {rows.map((r) => (
                   <tr key={r.id} className="border-b border-line/50 hover:bg-surface">
-                    <td className="py-1.5 pr-3 text-right font-bold"
-                      style={{ color: r.position === null ? 'rgb(var(--muted))'
-                        : r.position <= 10 ? 'rgb(var(--accent))'
-                          : r.position <= 30 ? 'rgb(var(--warning))' : 'rgb(var(--ink))' }}>
+                    <td className={'py-1.5 pr-3 text-right font-bold '
+                      + (r.position === null ? 'text-muted'
+                        : r.position <= 10 ? 'text-accent'
+                          : r.position <= 30 ? 'text-warning' : 'text-ink')}>
                       {r.position ?? '—'}
                     </td>
                     <td className="py-1.5 pr-3"><Movement pos={r.position} prev={r.previous_position} /></td>
@@ -190,6 +191,47 @@ DATAFORSEO_PASSWORD=...</pre>
           </div>
         )}
       </section>
+
+      <PageNotes
+        title="How rank tracking works"
+        intro={<>A position is not one number. The same phrase returns different results depending on which
+          engine answers it, which city it is asked from and whether the asker is on a phone &mdash; so every check
+          here records all three alongside the position, and a saved phrase is re-checked on the same settings
+          each time.</>}
+        items={[
+          { term: 'Engines', body: <>Google, Bing, Yahoo and Yandex. They disagree more than most people expect,
+            and a phrase you have given up on in one is often reachable in another. Yandex needs a provider that
+            supports it; the others work with any of the three.</> },
+          { term: 'Cities', body: <>Local intent changes the result set completely. The places you save here are
+            the same list the content pages check your pages against, so a phrase you track in a city and a page
+            that never names that city are visibly the same problem.</> },
+          { term: 'Device', body: <>Mobile and desktop results diverge, and mobile is the one that is indexed.
+            Tracking only desktop is the most common way to be pleasantly surprised by a position you do not
+            actually hold.</> },
+          { term: 'Movement', body: <>The arrow compares this check with the previous one for the same phrase,
+            engine, city and device. A phrase that drops out entirely is shown as such rather than as a missing
+            row, because disappearing is the result.</> },
+          { term: 'Your search budget', body: <>Every provider bills per search, and free tiers are small. Checks
+            are counted against a monthly ceiling per provider and stop rather than overrun it, so a scheduled
+            run cannot quietly exhaust the allowance you were saving.</> },
+          { term: 'Which URL ranked', body: <>Recorded alongside the position, because the interesting failure
+            is not being ranked low &mdash; it is the wrong page of yours ranking for a phrase. That is a signal
+            two pages are competing, and the fix is consolidation rather than more optimisation.</> },
+          { term: 'What a position does not tell you', body: <>Rank is one input to traffic and rarely the
+            binding one. Ads, an answer box, a map pack and image results all sit above the first organic
+            result, so position three on a crowded page can sit below the fold entirely.</> },
+          { term: 'Choosing phrases', body: <>Track what a customer would type, not what you would. Phrases that
+            describe your product category are usually contested by everyone in it, while the specific question
+            your product answers is both easier to win and far more likely to convert.</> },
+          { term: 'How often to check', body: <>Weekly is enough for almost every phrase. Results fluctuate
+            day to day for reasons that have nothing to do with your site &mdash; personalisation, testing,
+            ordinary index churn &mdash; so daily checks mostly buy noise, at full price. Check daily only around a
+            migration or a large content change, when you genuinely need to see the shape of a recovery rather
+            than its endpoint.</> },
+        ]}
+        footnote={<>Saved phrases are re-checked on a schedule; a one-off check does not add to the list. Track
+          the phrases you would actually change the site for &mdash; each one costs a search every time it runs.</>}
+      />
     </div>
   );
 }

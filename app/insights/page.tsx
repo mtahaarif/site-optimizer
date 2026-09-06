@@ -7,6 +7,7 @@ import {
 } from '@/src/core/integrations/store.ts';
 import { Connections } from './connections.tsx';
 import { pageMeta } from '../meta.ts';
+import { PageNotes } from '../page-notes.tsx';
 
 export const instant = false;
 export const metadata = pageMeta({
@@ -229,6 +230,40 @@ export default async function InsightsPage() {
           automatically — no restart, and no environment variables to edit.
         </p>
       )}
+
+      <PageNotes
+        title="What these numbers mean"
+        intro={<>Search Console describes what happens before the click; Analytics describes what happens after
+          it. Neither is complete on its own, which is why both sit on one page: the interesting pages are the
+          ones where the two disagree.</>}
+        items={[
+          { term: 'Impressions', body: <>How often a page of yours appeared in results for anything at all. High
+            impressions with almost no clicks is a snippet problem &mdash; the title and description are not earning
+            the click &mdash; rather than a ranking problem.</> },
+          { term: 'Clicks and CTR', body: <>Clicks as a share of impressions. Compare a page against its own average
+            position rather than against other pages: rank three with a poor rate is a page worth rewriting, while
+            rank thirty with the same rate is simply too low to judge.</> },
+          { term: 'Average position', body: <>Averaged across every query the page appeared for, so it moves when
+            the mix of queries changes and not only when you gain or lose ground. Treat it as a direction, and use
+            rank tracking for the phrases you actually care about.</> },
+          { term: 'Sessions and users', body: <>From Analytics, counting visits that arrived by any route &mdash; search,
+            links, email, direct. A page with sessions but no impressions is being reached some other way, which is
+            worth knowing before you decide it is failing.</> },
+          { term: 'Why this feeds the audit', body: <>Once connected, these figures weight the audit itself. A missing
+            title on a page with fifty thousand impressions outranks the same defect on a page nobody has ever
+            reached, so the issue list is ordered by consequence instead of by severity alone.</> },
+          { term: 'Why the two disagree', body: <>Search Console counts a click when someone leaves the results
+            page; Analytics counts a session when the page loads and its script runs. Ad blockers, bounced
+            loads and consent banners all land between those two events, so a persistent gap is normal and
+            only a widening one is a signal.</> },
+          { term: 'The date range', body: <>Both sources report on a trailing window, and Search Console data
+            settles over roughly three days. Judging yesterday against last week is comparing a partial figure
+            with a complete one, which is why a fresh drop at the right-hand edge is usually not real.</> },
+        ]}
+        footnote={<>Both connections are made here rather than in environment variables: paste the key, pick the
+          property from the list Google returns, and it takes effect immediately. Credentials are encrypted at rest
+          and can be disconnected or pointed at another account at any time.</>}
+      />
     </div>
   );
 }

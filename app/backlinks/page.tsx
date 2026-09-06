@@ -4,6 +4,7 @@ import { listBacklinks, backlinkSummary } from '@/src/backlinks/verify.ts';
 import { gscConfigured } from '@/src/backlinks/gsc.ts';
 import { Stat } from '../ui.tsx';
 import { pageMeta } from '../meta.ts';
+import { PageNotes } from '../page-notes.tsx';
 
 // Reads live data from Postgres, so there is no static shell to prerender.
 export const instant = false;
@@ -14,18 +15,20 @@ export const metadata = pageMeta({
   path: '/backlinks',
 });
 
-const STATUS_COLOR: Record<string, string> = {
-  active: 'rgb(var(--accent))',
-  lost: 'rgb(var(--blocker))',
-  broken: 'rgb(var(--critical))',
-  unverified: 'rgb(var(--muted))',
+// Utility classes rather than inline colours: one shared rule beats a style
+// attribute repeated on every row of a table that can run to hundreds of links.
+const STATUS_CLASS: Record<string, string> = {
+  active: 'text-accent border-accent',
+  lost: 'text-blocker border-blocker',
+  broken: 'text-critical border-critical',
+  unverified: 'text-muted border-muted',
 };
 
-const REL_COLOR: Record<string, string> = {
-  dofollow: 'rgb(var(--accent))',
-  nofollow: 'rgb(var(--warning))',
-  ugc: 'rgb(var(--warning))',
-  sponsored: 'rgb(var(--warning))',
+const REL_CLASS: Record<string, string> = {
+  dofollow: 'text-accent',
+  nofollow: 'text-warning',
+  ugc: 'text-warning',
+  sponsored: 'text-warning',
 };
 
 const host = (url: string): string => {
@@ -128,13 +131,13 @@ node scripts/backlinks.ts https://example.com`}</pre>
                     <tr key={l.id} className="border-b border-line/50 hover:bg-surface">
                       <td className="py-1.5 pr-3">
                         <span
-                          className="rounded border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.08em]"
-                          style={{ color: STATUS_COLOR[l.status], borderColor: STATUS_COLOR[l.status] }}
+                          className={'rounded border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.08em] '
+                            + (STATUS_CLASS[l.status] ?? 'text-muted border-line')}
                         >
                           {l.status}
                         </span>
                       </td>
-                      <td className="py-1.5 pr-3" style={{ color: l.rel ? REL_COLOR[l.rel] : undefined }}>
+                      <td className={'py-1.5 pr-3 ' + (l.rel ? REL_CLASS[l.rel] ?? '' : '')}>
                         {l.rel ?? '—'}
                       </td>
                       <td className="max-w-[300px] truncate py-1.5 pr-3">
@@ -164,6 +167,38 @@ node scripts/backlinks.ts https://example.com`}</pre>
           <code className="font-mono text-ink">node scripts/backlinks.ts --import-gsc &lt;url&gt;</code>
         </p>
       )}
+
+      <PageNotes
+        title="How backlink monitoring works"
+        intro={<>Getting a link is the hard part; keeping it is the part nobody watches. Every link in this list
+          is fetched again on a schedule and judged on what the linking page actually returns now, not on what it
+          returned when the link was first recorded.</>}
+        items={[
+          { term: 'Active', body: <>The linking page still loads and the link to you is still in its markup. This is
+            verified against the live page rather than a cached index, so it reflects an editor quietly removing
+            the link on the day they do it.</> },
+          { term: 'Lost', body: <>The page still exists but no longer links to you. This is the row worth acting on:
+            the relationship already exists, the page already ranks, and a short note to whoever maintains it
+            recovers the link far more often than chasing a new one would.</> },
+          { term: 'Broken', body: <>The linking page itself no longer resolves. Nothing to recover directly, but a
+            cluster of these from one domain usually means a site migration, and the same content often exists at
+            a new address that could link to you again.</> },
+          { term: 'Dofollow and nofollow', body: <>Whether the link passes ranking signal, read from its rel
+            attribute. Nofollow, sponsored and ugc links still send visitors and still count as evidence that
+            people reference you &mdash; they just do not carry authority.</> },
+          { term: 'Referring domains', body: <>Distinct sites linking to you, which matters far more than the raw
+            link count. Fifty links from one forum are worth less than five from five unrelated publications.</> },
+          { term: 'Anchor text', body: <>The words someone chose to link you with. A natural profile is mostly
+            your brand and bare URLs, with topical phrases scattered through it; a profile where most links use
+            the same commercial phrase is the pattern manual actions are built to catch.</> },
+          { term: 'Where the link sits', body: <>A link inside the body of a relevant article carries more than
+            the same link in a footer or a sidebar that appears on every page of a site. Position is not scored
+            here, but it is worth checking before deciding a lost link is worth chasing.</> },
+        ]}
+        footnote={<>Seed the list from Search Console when it is connected, or import a CSV from any backlink tool
+          you already pay for &mdash; monitoring works the same either way, because the verification is done here
+          against the live pages.</>}
+      />
     </div>
   );
 }

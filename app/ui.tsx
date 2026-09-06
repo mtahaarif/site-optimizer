@@ -44,13 +44,20 @@ export function StatusChip({ status }: { status: 'failed' | 'passed' | 'skipped'
   );
 }
 
-/** 0-100 score with a colour band. Bands are deliberately strict. */
-export function scoreBand(score: number): { label: string; color: string } {
-  if (score >= 90) return { label: 'Excellent', color: 'rgb(var(--accent))' };
-  if (score >= 75) return { label: 'Good', color: 'rgb(var(--accent))' };
-  if (score >= 50) return { label: 'Needs work', color: 'rgb(var(--warning))' };
-  if (score >= 25) return { label: 'Poor', color: 'rgb(var(--critical))' };
-  return { label: 'Critical', color: 'rgb(var(--blocker))' };
+/**
+ * 0-100 score with a colour band. Bands are deliberately strict.
+ *
+ * `text` is the same colour as a utility class. Prefer it: a `style` attribute
+ * per row is markup the browser cannot share or cache between elements, and it
+ * is what the `tags-with-style-attributes` check counts. `color` stays for the
+ * places that genuinely need a value — SVG strokes and computed gradients.
+ */
+export function scoreBand(score: number): { label: string; color: string; text: string } {
+  if (score >= 90) return { label: 'Excellent', color: 'rgb(var(--accent))', text: 'text-accent' };
+  if (score >= 75) return { label: 'Good', color: 'rgb(var(--accent))', text: 'text-accent' };
+  if (score >= 50) return { label: 'Needs work', color: 'rgb(var(--warning))', text: 'text-warning' };
+  if (score >= 25) return { label: 'Poor', color: 'rgb(var(--critical))', text: 'text-critical' };
+  return { label: 'Critical', color: 'rgb(var(--blocker))', text: 'text-blocker' };
 }
 
 export function ScoreDial({ score, size = 148 }: { score: number; size?: number }) {

@@ -43,8 +43,7 @@ export function ThemeToggle() {
       onClick={toggle}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={isDark ? 'Light mode' : 'Dark mode'}
-      className="fixed bottom-5 right-5 z-50 grid h-12 w-12 place-items-center rounded-full border border-line bg-surface text-ink shadow-[0_2px_12px_rgba(0,0,0,0.12)] transition-colors hover:border-ink"
-      style={{ borderRadius: '9999px' }}
+      className="circle fixed bottom-5 right-5 z-50 grid h-12 w-12 place-items-center border border-line bg-surface text-ink shadow-[0_2px_12px_rgba(0,0,0,0.12)] transition-colors hover:border-ink"
     >
       {/* keep icons stable before mount to avoid a hydration mismatch */}
       {mounted && isDark ? (

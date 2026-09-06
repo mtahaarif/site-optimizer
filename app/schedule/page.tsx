@@ -5,6 +5,7 @@ import { alertChannelsConfigured } from '@/src/alerts/send.ts';
 import { configuredProviders } from '@/src/ranks/providers.ts';
 import { gscConfigured } from '@/src/backlinks/gsc.ts';
 import { pageMeta } from '../meta.ts';
+import { PageNotes } from '../page-notes.tsx';
 
 // Reads live data from Postgres, so there is no static shell to prerender.
 export const instant = false;
@@ -66,14 +67,14 @@ export default async function SchedulePage() {
             <div key={r.label} className="rounded border border-line bg-surface px-4 py-3">
               <div className="flex items-baseline gap-2">
                 <span
-                  className="inline-block h-1.5 w-1.5 rounded-full"
-                  style={{ background: r.ok ? 'rgb(var(--accent))' : 'rgb(var(--muted))' }}
+                  className={'inline-block h-1.5 w-1.5 rounded-full '
+                    + (r.ok ? 'bg-accent' : 'bg-muted')}
                 />
                 <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
                   {r.label}
                 </span>
               </div>
-              <div className="mt-1 font-mono text-[12px]" style={{ color: r.ok ? 'rgb(var(--accent))' : 'rgb(var(--muted))' }}>
+              <div className={'mt-1 font-mono text-[12px] ' + (r.ok ? 'text-accent' : 'text-muted')}>
                 {r.detail}
               </div>
             </div>
@@ -146,8 +147,8 @@ schtasks /create /tn "SiteChecker Ranks" /sc weekly /d MON /st 06:00 ^
         <p className="mt-3 text-[13px] text-muted">
           Add credentials under <strong>Settings → Secrets and variables → Actions</strong> — the
           same <code className="font-mono">POSTGRES_URL</code> your app uses, plus whatever else
-          each script needs. Google accounts connected on{' '}
-          <Link href="/insights" className="text-accent hover:underline">Insights</Link> live in
+          each script needs. Google accounts connected on the{' '}
+          <Link href="/insights" className="text-accent hover:underline">search insights page</Link> live in
           that database, so a scheduled run picks them up from the connection string alone and
           needs no Google secrets of its own.
         </p>
@@ -173,6 +174,34 @@ node scripts/monitor.ts --add https://example.com
 node scripts/ranks.ts --add https://example.com "your keyword" google mobile US
 node scripts/backlinks.ts --import-csv https://example.com links.csv`}</Pre>
       </Block>
+
+      <PageNotes
+        title="What runs on a schedule, and why it matters"
+        intro={<>Everything on this page is optional: the tool works run-by-run from a laptop. Scheduling only
+          changes when the work happens, and the reason to bother is that the findings that matter most are the
+          ones you did not go looking for &mdash; a certificate about to expire, a link quietly removed, a page that
+          started returning an error after last night&rsquo;s release.</>}
+        items={[
+          { term: 'Uptime and certificate checks', body: <>The cheapest thing to run often. A short request per
+            site catches an outage and a certificate nearing expiry long before either becomes the reason your
+            traffic dropped.</> },
+          { term: 'Re-audits', body: <>A full crawl on a cadence turns the score into a trend. The comparison
+            between two runs is the useful part: it names the issues that opened since the last one, which is how
+            a regression gets traced to the release that caused it.</> },
+          { term: 'Rank checks', body: <>These cost money at every provider, so they are the one job worth pacing.
+            A monthly ceiling per provider is enforced in code, and a run stops at it rather than spending an
+            allowance you were saving.</> },
+          { term: 'Backlink verification', body: <>Links are re-fetched in batches so a large list spreads across
+            runs instead of hammering other people&rsquo;s servers. Lost links are what this is for, and they are only
+            recoverable while the removal is still recent.</> },
+          { term: 'Where credentials live', body: <>Google accounts connected on the Insights page are stored in
+            the database, encrypted at rest. A scheduled run therefore needs the connection string and nothing
+            else &mdash; no Google secrets are copied into the job.</> },
+        ]}
+        footnote={<>Any scheduler works: GitHub Actions on a cron, a Vercel cron, or plain crontab on a box you
+          already have. The scripts are ordinary Node entry points that exit non-zero on failure, so whatever runs
+          them can alert on that alone.</>}
+      />
     </div>
   );
 }

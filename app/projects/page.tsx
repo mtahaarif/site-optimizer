@@ -4,6 +4,7 @@ import { listProjects } from '@/src/crawler/store.ts';
 import { scoreBand } from '../ui.tsx';
 import { AddProject } from './add-project.tsx';
 import { pageMeta } from '../meta.ts';
+import { PageNotes } from '../page-notes.tsx';
 
 export const instant = false;
 export const metadata = pageMeta({
@@ -26,7 +27,7 @@ function Delta({ latest, first }: { latest: number; first: number }) {
   if (d === 0) return <span className="font-mono text-[11px] text-muted">±0 since first</span>;
   const up = d > 0;
   return (
-    <span className="font-mono text-[11px]" style={{ color: up ? 'rgb(var(--opportunity))' : 'rgb(var(--blocker))' }}>
+    <span className={'font-mono text-[11px] ' + (up ? 'text-opportunity' : 'text-blocker')}>
       {up ? '+' : ''}{d} since first audit
     </span>
   );
@@ -70,7 +71,7 @@ export default async function ProjectsPage() {
                     </div>
                   </div>
                   {band ? (
-                    <span className="tnum shrink-0 text-[30px] font-normal leading-none tracking-tight" style={{ color: band.color }}>
+                    <span className={'tnum shrink-0 text-[30px] font-normal leading-none tracking-tight ' + band.text}>
                       {p.latestScore!.toFixed(0)}
                     </span>
                   ) : (
@@ -88,6 +89,49 @@ export default async function ProjectsPage() {
           })}
         </div>
       )}
+
+      <PageNotes
+        title="How projects work"
+        intro={<>A project is one website. Every audit you run against it is kept, so the score on each card
+          is not a single reading but the latest point on a history you can open and scroll back through.
+          That history is the reason to re-audit after a release rather than only when something looks wrong.</>}
+        items={[
+          { term: 'The score on each card', body: <>Technical health from the most recent crawl, 0&ndash;100, on a
+            fixed and versioned rubric. Because the rubric never changes between runs, a difference between two
+            audits is a real change in the site rather than a change in how it was measured.</> },
+          { term: 'The delta underneath', body: <>Movement since the first audit of that project. It is the number
+            worth watching: a site can sit at a middling score for months and still be steadily improving, or
+            hold a good score while quietly regressing on the pages that matter.</> },
+          { term: 'Adding a website', body: <>Paste any URL. The crawler discovers pages from your sitemaps and
+            internal links, respects robots.txt, and detects what the site is built with before deciding which
+            checks apply &mdash; so a static marketing site is not marked down for lacking a framework it never used.</> },
+          { term: 'How many pages', body: <>Each audit walks up to the page budget you set. Pages are ranked by
+            internal link equity first, so a partial crawl still covers the pages that carry the most weight
+            rather than whichever ones happened to be found first.</> },
+          { term: 'Opening a project', body: <>The project view stacks every crawl into one trend, with the issues
+            that opened and closed between any two runs. This is where a regression gets traced back to the
+            release that caused it.</> },
+          { term: 'What a score does not mean', body: <>This is technical health, not a ranking forecast. It
+            measures how well the site is built and how cleanly it can be crawled and indexed &mdash; the part that
+            is fully in your control. Ranking also needs content worth reading and links from elsewhere, and
+            the tool deliberately does not pretend to score those here.</> },
+          { term: 'Comparing two sites', body: <>Scores are comparable across projects because the rubric is
+            fixed rather than derived from each crawl. A small brochure site and a large catalogue are still
+            different problems, though: the same score on a hundred pages represents far more work than on
+            five.</> },
+          { term: 'Removing a project', body: <>Deleting a project removes its crawls and the history with them.
+            If the goal is only to stop scheduled runs, leave the project and drop it from the schedule instead
+            &mdash; the trend is the part that took time to accumulate.</> },
+          { term: 'When to re-audit', body: <>After a release, after a migration, and on a slow cadence in
+            between. Most regressions arrive with a deploy rather than accumulating gradually, so a crawl
+            immediately after one is worth more than a dozen spread across a quiet month. The exception is a
+            site with an editorial team, where new pages ship continuously and a weekly crawl catches the
+            templates that were copied from a broken example.</> },
+        ]}
+        footnote={<>Auditing a site you do not control is fine &mdash; the crawler only reads public pages, obeys
+          robots.txt and identifies itself. Rank tracking and Search Console data are the parts that need
+          access you actually own.</>}
+      />
     </div>
   );
 }
