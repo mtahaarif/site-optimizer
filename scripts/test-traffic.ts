@@ -134,6 +134,10 @@ process.env['GOOGLE_SERVICE_ACCOUNT_JSON'] = JSON.stringify({
 });
 process.env['GSC_SITE_URL'] = BASE + '/';
 process.env['GA4_PROPERTY_ID'] = '999888777';
+// Credentials normally resolve from connected accounts first. This run must see
+// only the fixture above, and must not touch whatever the developer has
+// actually connected.
+process.env['INTEGRATIONS_ENV_ONLY'] = '1';
 
 await clearGscCache();
 await clearGa4Cache();

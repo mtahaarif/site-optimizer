@@ -12,6 +12,7 @@ import type { CheckOutcome } from '../core/checks/types.ts';
 import type { CategorySummary } from '../core/checks/registry.ts';
 import type { Severity } from '../core/scoring/model.ts';
 import type { CoreWebVitalsData } from '../core/pagespeed/types.ts';
+import { hasApiKey } from '../core/pagespeed/client.ts';
 import { fetchPageMetrics } from '../core/gsc/client.ts';
 import { gscConfigured } from '../core/gsc/auth.ts';
 import { fetchGa4Metrics, ga4Configured, pathOfUrl } from '../core/ga4/client.ts';
@@ -197,7 +198,7 @@ export async function runAudit(
   // Fetched after the crawl and before checks run: the search-traffic pack
   // needs it, and the scoring model weights pages by it. Both sources fail
   // soft — an unavailable API degrades the report, never aborts it.
-  if (gscConfigured()) {
+  if (await gscConfigured()) {
     onProgress({
       phase: 'checking', crawled: site.pages.length, queued: 0, total: site.pages.length,
       currentUrl: null, message: 'Fetching Search Console data',
@@ -206,7 +207,7 @@ export async function runAudit(
     site.hasSearchConsole = !site.gsc.error;
   }
 
-  if (ga4Configured()) {
+  if (await ga4Configured()) {
     onProgress({
       phase: 'checking', crawled: site.pages.length, queued: 0, total: site.pages.length,
       currentUrl: null, message: 'Fetching Google Analytics data',
@@ -436,7 +437,7 @@ export async function runAudit(
 
     pagespeed: {
       attempted: site.pagespeedAttempted,
-      usedApiKey: !!process.env['PAGESPEED_API_KEY']?.trim(),
+      usedApiKey: await hasApiKey(),
       results: site.pagespeed,
       errors: site.pagespeedErrors,
     },

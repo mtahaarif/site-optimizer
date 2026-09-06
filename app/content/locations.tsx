@@ -15,11 +15,9 @@
 import { Fragment, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { shortUrl } from '../ui.tsx';
+import { LocationFilter, type LocationRow } from './places.tsx';
 
-export interface LocationRow {
-  id: number;
-  label: string;
-}
+export type { LocationRow };
 
 export interface CellRow {
   locationId: number;
@@ -59,7 +57,8 @@ const band = (n: number) =>
   n >= 70 ? 'rgb(var(--opportunity))' : n >= 35 ? 'rgb(var(--warning))' : 'rgb(var(--blocker))';
 
 export function LocationOptimiser({
-  siteId, crawlId, pages, locations: initial, cells: stored, aiConfigured,
+  siteId, crawlId, pages, locations, cells: stored, aiConfigured,
+  pickedLocs, onToggleLocation, onAllLocations, onNoLocations,
 }: {
   siteId: number;
   crawlId: string | null;
@@ -67,13 +66,15 @@ export function LocationOptimiser({
   locations: LocationRow[];
   cells: CellRow[];
   aiConfigured: boolean;
+  /** Owned by the page, so the list of places is added once and shared. */
+  pickedLocs: Set<number>;
+  onToggleLocation: (id: number) => void;
+  onAllLocations: () => void;
+  onNoLocations: () => void;
 }) {
   const router = useRouter();
 
-  const [locations, setLocations] = useState<LocationRow[]>(initial);
-  const [label, setLabel] = useState('');
   const [pickedPages, setPickedPages] = useState<Set<string>>(new Set());
-  const [pickedLocs, setPickedLocs] = useState<Set<number>>(new Set(initial.map((l) => l.id)));
   const [wantDraft, setWantDraft] = useState(false);
   const [context, setContext] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
@@ -96,42 +97,6 @@ export function LocationOptimiser({
 
   const shown = locations.filter((l) => pickedLocs.has(l.id));
   const selectedCells = pickedPages.size * pickedLocs.size;
-
-  async function addLocation() {
-    const value = label.trim();
-    if (!value) return;
-    setBusy('add'); setError(null);
-    try {
-      const res = await fetch('/api/locations', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ siteId, label: value }),
-      });
-      const data = await res.json() as { location?: LocationRow; error?: string };
-      if (!res.ok || !data.location) {
-        setError(data.error ?? 'That location could not be saved.');
-      } else {
-        const loc = data.location;
-        setLocations((prev) => (prev.some((l) => l.id === loc.id)
-          ? prev
-          : [...prev, loc].sort((a, b) => a.label.localeCompare(b.label))));
-        setPickedLocs((prev) => new Set(prev).add(loc.id));
-        setLabel('');
-      }
-    } catch { setError('Could not save that location.'); }
-    setBusy(null);
-  }
-
-  async function dropLocation(id: number) {
-    setBusy('add');
-    try {
-      await fetch(`/api/locations?siteId=${siteId}&id=${id}`, { method: 'DELETE' });
-      setLocations((prev) => prev.filter((l) => l.id !== id));
-      setPickedLocs((prev) => { const n = new Set(prev); n.delete(id); return n; });
-      router.refresh();
-    } catch { setError('Could not remove that location.'); }
-    setBusy(null);
-  }
 
   async function run(mode: 'coverage' | 'prompt' | 'generate') {
     if (!crawlId) { setError('Run an audit first — the page text comes from it.'); return; }
@@ -181,84 +146,62 @@ export function LocationOptimiser({
   return (
     <div className="flex flex-col gap-5">
 
-      {/* ---- the places ---- */}
-      <div className="border border-line bg-surface p-5">
-        <h3 className="text-[13.5px] font-medium text-ink">Where do you want to be found?</h3>
-        <p className="mt-1 max-w-[80ch] text-[12.5px] leading-relaxed text-muted">
-          Add each town, city or region you serve. The same list is used when you check a search
-          ranking, so a place added here only has to be typed once.
-        </p>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          <input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void addLocation(); } }}
-            placeholder="Austin, Texas"
-            aria-label="Add a location"
-            className="min-w-[220px] flex-1 border border-line bg-ground px-3 py-2 text-[13px] text-ink placeholder:text-muted focus:border-ink focus:outline-none"
-          />
-          <button onClick={() => void addLocation()} disabled={busy !== null || !label.trim()}
-            className="border border-ink bg-ink px-4 py-2 text-[13px] font-medium text-ground transition-opacity hover:opacity-90 disabled:opacity-40">
-            Add location
-          </button>
-        </div>
-
-        {locations.length > 0 && (
-          <>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {locations.map((l) => {
-                const on = pickedLocs.has(l.id);
-                return (
-                  <span key={l.id}
-                    className={'inline-flex items-center gap-2 border px-2.5 py-1 text-[12.5px] transition-colors '
-                      + (on ? 'border-ink bg-ink text-ground' : 'border-line text-muted')}>
-                    <button
-                      onClick={() => setPickedLocs((prev) => {
-                        const n = new Set(prev);
-                        if (n.has(l.id)) n.delete(l.id); else n.add(l.id);
-                        return n;
-                      })}
-                      aria-pressed={on}>
-                      {l.label}
-                    </button>
-                    <button onClick={() => void dropLocation(l.id)} aria-label={`Remove ${l.label}`}
-                      className="opacity-60 hover:opacity-100">×</button>
-                  </span>
-                );
-              })}
-            </div>
-            <p className="mt-2 text-[11.5px] text-muted">
-              Click a name to show or hide its column. The × removes it entirely.
-            </p>
-          </>
-        )}
-      </div>
+      <LocationFilter
+        locations={locations}
+        picked={pickedLocs}
+        onToggle={onToggleLocation}
+        onAll={onAllLocations}
+        onNone={onNoLocations}
+        label="Rewrite for these places"
+        hint="One model call per ticked page per ticked place, so this is the dial that decides
+          what a run costs. Add or remove places in card 02."
+      />
 
       {locations.length > 0 && (
         <>
           {/* ---- controls ---- */}
           <div className="flex flex-col gap-3 border border-line bg-surface p-5">
+            {/* What comes back, chosen before how it is produced — the two
+                buttons below differ only in who runs the prompt. */}
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="text-[12.5px] font-medium text-ink">I want</span>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  { on: false, label: 'Advice on what to change' },
+                  { on: true, label: 'A full page written for me' },
+                ] as const).map((opt) => (
+                  <button
+                    key={String(opt.on)}
+                    onClick={() => setWantDraft(opt.on)}
+                    aria-pressed={wantDraft === opt.on}
+                    disabled={busy !== null}
+                    className={'border px-3 py-1.5 text-[12.5px] transition-colors disabled:opacity-40 '
+                      + (wantDraft === opt.on
+                        ? 'border-ink bg-ink text-ground'
+                        : 'border-line text-muted hover:border-ink hover:text-ink')}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => void run('coverage')} disabled={busy !== null}
-                className="border border-ink bg-ink px-4 py-2 text-[13px] font-medium text-ground transition-opacity hover:opacity-90 disabled:opacity-40">
-                {busy === 'coverage' ? 'Checking…' : 'Check every page (free)'}
-              </button>
-              <button onClick={() => void run('prompt')} disabled={busy !== null || pickedPages.size === 0}
-                className="border border-line px-4 py-2 text-[13px] text-muted transition-colors hover:border-ink hover:text-ink disabled:opacity-40">
-                {busy === 'prompt' ? 'Building…' : 'Copy prompts instead'}
-              </button>
               <button onClick={() => void run('generate')}
                 disabled={busy !== null || pickedPages.size === 0 || !aiConfigured}
-                className="border border-line px-4 py-2 text-[13px] text-muted transition-colors hover:border-ink hover:text-ink disabled:opacity-40">
+                className="border border-ink bg-ink px-4 py-2 text-[13px] font-medium text-ground transition-opacity hover:opacity-90 disabled:opacity-40">
                 {busy === 'generate'
                   ? 'Writing…'
                   : `Generate with AI${selectedCells ? ` (${selectedCells} call${selectedCells === 1 ? '' : 's'})` : ''}`}
               </button>
-              <label className="flex items-center gap-2 text-[12.5px] text-muted">
-                <input type="checkbox" checked={wantDraft} onChange={(e) => setWantDraft(e.target.checked)} />
-                Write the full page, not just advice
-              </label>
+              <button onClick={() => void run('prompt')} disabled={busy !== null || pickedPages.size === 0}
+                className="border border-line px-4 py-2 text-[13px] text-muted transition-colors hover:border-ink hover:text-ink disabled:opacity-40">
+                {busy === 'prompt' ? 'Building…' : 'Give me the prompt instead'}
+              </button>
+              <button onClick={() => void run('coverage')} disabled={busy !== null}
+                className="border border-line px-4 py-2 text-[13px] text-muted transition-colors hover:border-ink hover:text-ink disabled:opacity-40">
+                {busy === 'coverage' ? 'Checking…' : 'Check coverage (free)'}
+              </button>
             </div>
 
             <input

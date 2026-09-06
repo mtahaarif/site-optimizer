@@ -208,7 +208,7 @@ const trafficSiteChecks: SiteCheck[] = [
     title: 'Connect Google Analytics and Search Console properties',
     category: 'search-traffic', severity: 'opportunity',
     why: 'Without Search Console, page importance weighting falls back to internal PageRank alone and this entire category cannot run. Connecting it is what turns a technical audit into a prioritised one.',
-    fix: 'Create a Google Cloud service account, enable the Search Console API, add the service account email as a user on the property, then set GOOGLE_SERVICE_ACCOUNT_JSON and GSC_SITE_URL.',
+    fix: 'Create a Google Cloud service account, enable the Search Console API, add the service account email as a user on the property, then connect it on the Insights page — the property list is fetched for you.',
     test: (site) => !site.hasSearchConsole,
   }),
 
@@ -217,7 +217,7 @@ const trafficSiteChecks: SiteCheck[] = [
     title: 'Search Console data could not be fetched',
     category: 'search-traffic', severity: 'warning',
     why: 'Credentials are configured but the query failed, so traffic data is missing from this report and the search-traffic checks could not run.',
-    fix: 'Check the error. The usual cause is the service account not being added as a user on the Search Console property, or GSC_SITE_URL not matching the property exactly (https://example.com/ versus sc-domain:example.com).',
+    fix: 'Check the error. The usual cause is the service account having been removed as a user on the Search Console property. Re-connecting on the Insights page verifies the access before it saves, so it will say exactly what Google is refusing.',
     test: (site) => site.gsc?.error ?? false,
   }),
 
@@ -226,7 +226,7 @@ const trafficSiteChecks: SiteCheck[] = [
     title: 'Connect Google Analytics 4',
     category: 'search-traffic', severity: 'opportunity',
     why: 'Without GA4, page importance weighting has no behavioural signal and the analytics cross-validation checks cannot run. Search Console shows who arrived from search; GA4 shows what they did next, and the two disagree often enough to be worth having both.',
-    fix: 'Enable the Google Analytics Data API in Google Cloud, add the service account email as a Viewer on the GA4 property, then set GA4_PROPERTY_ID to the numeric property id.',
+    fix: 'Enable the Google Analytics Data API in Google Cloud, add the service account email as a Viewer on the GA4 property, then connect it on the Insights page.',
     test: (site) => !site.hasGa4,
   }),
 
@@ -235,7 +235,7 @@ const trafficSiteChecks: SiteCheck[] = [
     title: 'GA4 data could not be fetched',
     category: 'search-traffic', severity: 'warning',
     why: 'A GA4 property is configured but the query failed, so engagement data is missing from this report.',
-    fix: 'Check the error. The usual causes are the service account not being added as a Viewer on the property, or GA4_PROPERTY_ID holding a measurement id (G-XXXXXXX) rather than the numeric property id.',
+    fix: 'Check the error. The usual cause is the service account having been removed as a Viewer on the property. Re-connecting on the Insights page confirms the access against the Data API before it saves.',
     test: (site) => site.ga4?.error ?? false,
   }),
 

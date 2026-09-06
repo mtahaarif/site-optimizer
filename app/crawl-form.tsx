@@ -199,7 +199,7 @@ export function CrawlForm({ initialUrl = '', lockUrl = false }: { initialUrl?: s
             PageSpeed pages controls how many URLs are measured for Core Web Vitals — the
             homepage (mobile and desktop) plus the highest-PageRank pages. Each measurement is a
             rate-limited API call taking several seconds, so set 0 to skip it. Without a
-            <code className="mx-1 font-mono">PAGESPEED_API_KEY</code> these requests share
+            PageSpeed Insights key connected on the Insights page, these requests share
             Google&rsquo;s anonymous quota and frequently fail.
           </p>
         </div>

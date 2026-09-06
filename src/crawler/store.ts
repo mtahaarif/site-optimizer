@@ -174,6 +174,21 @@ export async function hasSnapshot(crawlId: string, url: string): Promise<boolean
   ));
 }
 
+/**
+ * Which of a crawl's pages have a stored copy — in one query.
+ *
+ * Asking hasSnapshot() per page looks harmless and is not: the pool holds a
+ * single connection per invocation, so sixty of them run one after another
+ * against a remote database and the page times out waiting for a connection
+ * long before the answers arrive. The whole set is one cheap index scan.
+ */
+export async function snapshotUrlKeys(crawlId: string): Promise<Set<string>> {
+  const rows = await all<{ url_key: string }>(
+    'SELECT url_key FROM page_snapshots WHERE crawl_id = ?', crawlId,
+  );
+  return new Set(rows.map((r) => r.url_key));
+}
+
 export async function saveReport(report: AuditReport): Promise<void> {
   const site = await upsertSite(report.origin);
   await run(

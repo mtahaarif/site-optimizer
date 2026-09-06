@@ -1,12 +1,14 @@
 import { connection } from 'next/server';
 import Link from 'next/link';
-import { listProjects, projectCrawls, loadReport, hasSnapshot } from '@/src/crawler/store.ts';
+import { listProjects, projectCrawls, loadReport, snapshotUrlKeys } from '@/src/crawler/store.ts';
 import { gradesForCrawl, llmConfigured, activeProvider } from '@/src/core/content/grade.ts';
-import { ScoreDial } from '../ui.tsx';
-import { Section, MeterBar, SitePicker } from '../panel.tsx';
-import { ContentGrader, type PageRow, type GradeRow } from './grader.tsx';
-import { LocationOptimiser, type CellRow, type LocationRow } from './locations.tsx';
+import { SitePicker } from '../panel.tsx';
+import type { PageRow, GradeRow } from './grader.tsx';
+import type { CellRow } from './locations.tsx';
+import type { LocationRow } from './places.tsx';
+import { ContentWorkbench } from './workbench.tsx';
 import { listLocations, locationContentForSite } from '@/src/core/locations/store.ts';
+import { normalizeUrl } from '@/src/core/extract.ts';
 import { pageMeta } from '../meta.ts';
 
 export const instant = false;
@@ -54,12 +56,13 @@ export default async function ContentPage({
       .sort((a, b) => b.pageRank - a.pageRank)
       .slice(0, 60)
     : [];
-  const pages: PageRow[] = crawlId
-    ? await Promise.all(candidates.map(async (p) => ({
-        url: p.url, title: p.title, words: p.wordCount, pageRank: p.pageRank,
-        hasSnapshot: await hasSnapshot(crawlId, p.url),
-      })))
-    : [];
+  // One query for the whole set, not one per page: the pool holds a single
+  // connection, so sixty round trips to a remote database is a timeout.
+  const snapshots = crawlId ? await snapshotUrlKeys(crawlId) : new Set<string>();
+  const pages: PageRow[] = candidates.map((p) => ({
+    url: p.url, title: p.title, words: p.wordCount, pageRank: p.pageRank,
+    hasSnapshot: snapshots.has(normalizeUrl(p.url)),
+  }));
 
   const locations: LocationRow[] = (await listLocations(selected.siteId))
     .map((l) => ({ id: l.id, label: l.label }));
@@ -70,24 +73,18 @@ export default async function ContentPage({
       analysedAt: c.analysedAt, generatedAt: c.generatedAt,
     }));
 
+  // Worst-first, which is the order the summary and the weakest-page callout
+  // both rely on.
   const stored = crawlId ? await gradesForCrawl(crawlId) : [];
-  const grades: Record<string, GradeRow> = {};
-  for (const g of stored) {
-    grades[g.url] = {
-      url: g.url, overall: g.overall, depth: g.depth, relevance: g.relevance,
-      readability: g.readability, originality: g.originality, trust: g.trust,
-      structure: g.structure, verdict: g.verdict, intent: g.intent,
-      strengths: g.strengths, fixes: g.fixes, gradedAt: g.gradedAt, words: g.words,
-    };
-  }
+  const grades: GradeRow[] = stored.map((g) => ({
+    url: g.url, overall: g.overall, depth: g.depth, relevance: g.relevance,
+    readability: g.readability, originality: g.originality, trust: g.trust,
+    structure: g.structure, verdict: g.verdict, intent: g.intent,
+    strengths: g.strengths, fixes: g.fixes, gradedAt: g.gradedAt, words: g.words,
+    locations: g.locations, localFit: g.localFit ?? [],
+  }));
 
-  const avg = stored.length ? Math.round(stored.reduce((s, g) => s + g.overall, 0) / stored.length) : null;
-  const weakest = stored.length ? stored[0]! : null; // sorted worst-first
   const host = selected.origin.replace(/^https?:\/\//, '');
-
-  // Average of each dimension, so you can see what the site is systematically bad at.
-  const dim = (pick: (g: typeof stored[number]) => number) =>
-    stored.length ? Math.round(stored.reduce((s, g) => s + pick(g), 0) / stored.length) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -105,97 +102,22 @@ export default async function ContentPage({
 
       <SitePicker projects={projects} selectedId={selected.siteId} base="/content" />
 
-      {/* ---- summary ---- */}
-      {stored.length > 0 && avg !== null && (
-        <div className="flex flex-col gap-8 border border-line bg-surface p-6 lg:flex-row lg:items-center">
-          <div className="flex items-center gap-5">
-            <ScoreDial score={avg} />
-            <div className="lg:hidden">
-              <div className="text-[15px] font-medium text-ink">{host}</div>
-              <div className="text-[12.5px] text-muted">Average quality</div>
-            </div>
-          </div>
-          <div className="flex-1">
-            <div className="hidden lg:block">
-              <h2 className="text-[15px] font-medium text-ink">Average quality · {host}</h2>
-              <p className="mt-0.5 text-[12.5px] text-muted">
-                Across {stored.length} graded {stored.length === 1 ? 'page' : 'pages'}. Feeds the score on{' '}
-                <Link href="/ai-visibility" className="text-accent hover:underline">AI visibility</Link>.
-              </p>
-            </div>
-            <div className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-3">
-              <MeterBar label="Depth" got={dim((g) => g.depth)} max={100} />
-              <MeterBar label="Originality" got={dim((g) => g.originality)} max={100} />
-              <MeterBar label="Expertise" got={dim((g) => g.trust)} max={100} />
-              <MeterBar label="Relevance" got={dim((g) => g.relevance)} max={100} />
-              <MeterBar label="Readability" got={dim((g) => g.readability)} max={100} />
-              <MeterBar label="Structure" got={dim((g) => g.structure)} max={100} />
-            </div>
-            {weakest && (
-              <p className="mt-4 text-[12.5px] leading-relaxed text-muted">
-                <span className="text-ink">Weakest page ({weakest.overall}/100):</span>{' '}
-                {weakest.url.replace(/^https?:\/\/[^/]+/, '') || '/'} — {weakest.verdict}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ---- grader ---- */}
-      <Section
-        title="Grade your pages"
-        question="Each page is read once and scored on six dimensions, with specific fixes. Results are saved, so re-opening never re-spends."
-        status={stored.length ? `${stored.length} of ${pages.length} graded` : 'None graded yet'}
-        tone={stored.length ? 'good' : 'neutral'}
-      >
-        <div className="px-6 py-5">
-          {!configured ? (
-            <div className="border border-warning bg-ground p-5">
-              <h3 className="text-[14px] font-medium text-ink">Connect an AI key to grade your writing</h3>
-              <p className="mt-1.5 max-w-[76ch] text-[13px] leading-relaxed text-muted">
-                Add one key to <span className="font-mono text-ink">.env.local</span> and restart. It stays on this
-                machine and is only sent to the provider you choose.
-              </p>
-              <pre className="scroll-x mt-3 border border-line bg-surface p-3 font-mono text-[11.5px] text-ink">
-{`GEMINI_API_KEY=…        # best free allowance
-GROQ_API_KEY=gsk_…      # fastest per page
-ANTHROPIC_API_KEY=sk-…  # strongest judgement (paid)`}
-              </pre>
-            </div>
-          ) : pages.length === 0 ? (
-            <p className="text-[13.5px] text-muted">No pages to grade in the latest audit for this website.</p>
-          ) : (
-            <ContentGrader crawlId={crawlId!} pages={pages} grades={grades} configured={configured} />
-          )}
-        </div>
-      </Section>
-
-      {/* ---- locations ---- */}
-      <Section
-        title="Rank in more than one place"
-        question="Add the places you serve, see which pages already read as serving them, and rewrite the ones that don't — with AI, or with a prompt you copy and run yourself."
-        status={locations.length ? `${locations.length} ${locations.length === 1 ? 'location' : 'locations'}` : 'No locations yet'}
-        tone={locations.length ? 'good' : 'neutral'}
-      >
-        <div className="px-6 py-5">
-          <LocationOptimiser
-            siteId={selected.siteId}
-            crawlId={crawlId}
-            pages={pages.map((p) => ({ url: p.url, title: p.title, hasSnapshot: p.hasSnapshot }))}
-            locations={locations}
-            cells={cells}
-            aiConfigured={configured}
-          />
-          <p className="mt-5 text-[12.5px] leading-relaxed text-muted">
-            The same locations are used on{' '}
-            <Link href="/ranks" className="text-accent hover:underline">search rankings</Link> — check
-            where you actually place in each city, then come back and fix the pages that fall short.
-          </p>
-        </div>
-      </Section>
+      <ContentWorkbench
+        siteId={selected.siteId}
+        crawlId={crawlId}
+        host={host}
+        pages={pages}
+        grades={grades}
+        cells={cells}
+        locations={locations}
+        aiConfigured={configured}
+      />
 
       <p className="text-[12.5px] leading-relaxed text-muted">
-        Re-run an audit and grade again to see whether a rewrite actually improved a page.
+        The places above are the same list{' '}
+        <Link href="/ranks" className="text-accent hover:underline">search rankings</Link> uses — check
+        where you actually place in each city, then come back and fix the pages that fall short.
+        Re-run an audit and grade again to see whether a rewrite improved a page.
         {provider && <> Grading with <span className="font-mono text-ink">{provider.model}</span> via {provider.label}.</>}
       </p>
     </div>

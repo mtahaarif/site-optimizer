@@ -36,7 +36,7 @@ export default async function BacklinksPage() {
   await connection();
 
   const sites = await listSites();
-  const gsc = gscConfigured();
+  const gsc = await gscConfigured();
 
   const bySite = await Promise.all(sites.map(async (site) => ({
     site,

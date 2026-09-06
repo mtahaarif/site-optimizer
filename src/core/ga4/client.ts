@@ -11,7 +11,8 @@
  * one with impressions and no sessions.
  */
 import { all, get, run, tx } from '../../db/index.ts';
-import { getAccessToken } from '../gsc/auth.ts';
+import { getAccessToken, parseServiceAccount } from '../gsc/auth.ts';
+import { ga4Settings } from '../integrations/store.ts';
 
 const ANALYTICS_SCOPE = 'https://www.googleapis.com/auth/analytics.readonly';
 const ENDPOINT = 'https://analyticsdata.googleapis.com/v1beta/properties';
@@ -42,17 +43,12 @@ export interface Ga4Data {
   error: string | null;
 }
 
-export function ga4PropertyId(): string | null {
-  const v = process.env['GA4_PROPERTY_ID']?.trim();
-  // Accept both "properties/123456" and a bare numeric id.
-  return v ? v.replace(/^properties\//, '') : null;
+export async function ga4PropertyId(): Promise<string | null> {
+  return (await ga4Settings())?.propertyId ?? null;
 }
 
-export function ga4Configured(): boolean {
-  const hasCreds = !!(process.env['GOOGLE_SERVICE_ACCOUNT_JSON']?.trim()
-    ?? process.env['GOOGLE_SERVICE_ACCOUNT_KEY']?.trim()
-    ?? process.env['GOOGLE_APPLICATION_CREDENTIALS']?.trim());
-  return hasCreds && ga4PropertyId() !== null;
+export async function ga4Configured(): Promise<boolean> {
+  return (await ga4Settings()) !== null;
 }
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -176,7 +172,8 @@ export async function fetchGa4Metrics(opts: {
   propertyId?: string;
   skipCache?: boolean;
 } = {}): Promise<Ga4Data> {
-  const propertyId = opts.propertyId ?? ga4PropertyId() ?? '';
+  const settings = await ga4Settings();
+  const propertyId = opts.propertyId ?? settings?.propertyId ?? '';
   const range = defaultRange();
   const startDate = opts.startDate ?? range.startDate;
   const endDate = opts.endDate ?? range.endDate;
@@ -187,8 +184,8 @@ export async function fetchGa4Metrics(opts: {
     fromCache: false, fetchedAt: Date.now(), error,
   });
 
-  if (!ga4Configured()) {
-    return empty('GA4 is not configured (GA4_PROPERTY_ID + a Google service account)');
+  if (!settings) {
+    return empty('Google Analytics is not connected. Connect it on the Insights page.');
   }
 
   if (!opts.skipCache) {
@@ -197,7 +194,12 @@ export async function fetchGa4Metrics(opts: {
   }
 
   try {
-    const token = await getAccessToken(ANALYTICS_SCOPE);
+    // Analytics can be connected with a different service account than Search
+    // Console, so the token is minted from this integration's own credentials
+    // rather than whatever the GSC default resolves to.
+    const token = await getAccessToken(
+      ANALYTICS_SCOPE, parseServiceAccount(settings.serviceAccountJson),
+    );
     const byPath = new Map<string, Ga4PageMetrics>();
     let offset = 0;
     const limit = 10_000;

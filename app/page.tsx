@@ -87,8 +87,7 @@ export default async function Dashboard() {
   if (!dbConfigured()) return <SetupRequired />;
 
   const [reports, sites] = [await listReports(), await listSites()];
-  const gscOn = gscConfigured();
-  const gaOn = ga4Configured();
+  const [gscOn, gaOn] = await Promise.all([gscConfigured(), ga4Configured()]);
   const latest = reports[0] ?? null;
   const report = latest ? await loadReport(latest.id) : null;
 

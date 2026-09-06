@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { AuditReport } from '@/src/crawler/audit.ts';
 import type { CoreWebVitalsData, MetricScore } from '@/src/core/pagespeed/types.ts';
 import { SCORE_COLOR, SCORE_LABEL } from '@/src/core/pagespeed/types.ts';
@@ -113,9 +114,10 @@ export function CoreWebVitalsCard({ report }: { report: AuditReport }) {
           <p className="text-[13px] text-ink">{reason}</p>
           {!ps.usedApiKey && (
             <p className="mt-2 max-w-[72ch] text-[12.5px] leading-relaxed text-muted">
-              No <code className="font-mono">PAGESPEED_API_KEY</code> is set, so requests use
-              Google&rsquo;s shared anonymous quota — which is frequently exhausted. A free key
-              from the Google Cloud console raises this to 25,000 requests/day.
+              No PageSpeed Insights key is connected, so requests use Google&rsquo;s shared
+              anonymous quota — which is frequently exhausted. A free key from the Google Cloud
+              console raises this to 25,000 requests/day;{' '}
+              <Link href="/insights" className="text-accent hover:underline">connect one on Insights</Link>.
             </p>
           )}
           {ps.errors.length > 1 && (

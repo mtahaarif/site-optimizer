@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { connection } from 'next/server';
 import { dbStats } from '@/src/db/index.ts';
 import { alertChannelsConfigured } from '@/src/alerts/send.ts';
@@ -40,11 +41,12 @@ export default async function SchedulePage() {
   const stats = await dbStats();
   const channels = alertChannelsConfigured();
   const providers = configuredProviders();
+  const gscOn = await gscConfigured();
 
   const ready = [
     { label: 'Alert delivery', ok: channels.length > 0, detail: channels.join(', ') || 'console only' },
     { label: 'SERP provider', ok: providers.length > 0, detail: providers.map((p) => p.name).join(', ') || 'none' },
-    { label: 'Search Console', ok: gscConfigured(), detail: gscConfigured() ? 'configured' : 'not configured' },
+    { label: 'Search Console', ok: gscOn, detail: gscOn ? 'connected' : 'not connected' },
   ];
 
   return (
@@ -144,21 +146,25 @@ schtasks /create /tn "SiteChecker Ranks" /sc weekly /d MON /st 06:00 ^
         <p className="mt-3 text-[13px] text-muted">
           Add credentials under <strong>Settings → Secrets and variables → Actions</strong> — the
           same <code className="font-mono">POSTGRES_URL</code> your app uses, plus whatever else
-          each script needs:
+          each script needs. Google accounts connected on{' '}
+          <Link href="/insights" className="text-accent hover:underline">Insights</Link> live in
+          that database, so a scheduled run picks them up from the connection string alone and
+          needs no Google secrets of its own.
         </p>
         <Pre>{`POSTGRES_URL
 SENDGRID_API_KEY              ALERT_EMAIL_TO
 ALERT_EMAIL_FROM              ALERT_WEBHOOK_URL
 SERPAPI_KEY                   VALUESERP_KEY
 DATAFORSEO_LOGIN              DATAFORSEO_PASSWORD
-GOOGLE_SERVICE_ACCOUNT_JSON   GSC_SITE_URL`}</Pre>
+INTEGRATIONS_SECRET           (only if you set one)`}</Pre>
       </Block>
 
       <Block title="Local environment">
         <p className="mb-3 max-w-[72ch] text-[13px] leading-relaxed text-muted">
           Copy <code className="font-mono">.env.example</code> to{' '}
           <code className="font-mono">.env.local</code> and set <code className="font-mono">POSTGRES_URL</code>.
-          Secrets never go in the database — only in the environment.
+          Google accounts are connected in the app rather than set here; set{' '}
+          <code className="font-mono">INTEGRATIONS_SECRET</code> to encrypt them at rest.
         </p>
         <Pre>{`cp .env.example .env.local
 

@@ -63,10 +63,7 @@ export function Sidebar() {
           S
         </span>
         <span className="hidden flex-col leading-none lg:flex">
-          <span className="text-[14px] font-normal tracking-tight text-ink">SiteChecker</span>
-          <span className="mt-1 font-mono text-[8.5px] uppercase tracking-[0.16em] text-muted">
-            Next.js native
-          </span>
+          <span className="text-[14px] font-normal tracking-tight text-ink">SiteOptimizer</span>
         </span>
       </Link>
 

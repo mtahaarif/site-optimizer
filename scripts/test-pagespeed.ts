@@ -10,6 +10,11 @@
 import { fetchPagespeed } from '../src/core/pagespeed/client.ts';
 import { closePool } from '../src/db/index.ts';
 
+// The keyless path is what several assertions below check, so this run must not
+// pick up a key connected in the UI or set in the shell.
+process.env['INTEGRATIONS_ENV_ONLY'] = '1';
+delete process.env['PAGESPEED_API_KEY'];
+
 const FIXTURE = {
   // Page-level CrUX: this URL has enough real traffic for field data.
   loadingExperience: {
@@ -115,7 +120,7 @@ console.log('\nAPI errors must degrade, never throw');
 mockWith({ error: { message: 'Quota exceeded', code: 429 } }, 429);
 const c = await fetchPagespeed(uniq(), 'mobile', { skipCache: true });
 check('returns ok:false', c.ok, false);
-if (!c.ok) check('429 hints at the API key', c.error.error.includes('PAGESPEED_API_KEY'), true);
+if (!c.ok) check('429 hints at the API key', c.error.error.includes('connect an API key'), true);
 
 console.log('\nThreshold boundaries (Google official)');
 mockWith({

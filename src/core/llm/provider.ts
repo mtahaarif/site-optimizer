@@ -25,7 +25,10 @@ export interface ProviderInfo {
 
 // Aliases that always resolve to the current generation. Pinned ids get retired
 // ("no longer available to new users"), which would break grading silently.
-const GEMINI_DEFAULT_MODEL = 'gemini-flash-lite-latest';
+// Flash rather than Flash-Lite: grading is a judgement task, and Lite's scores
+// bunch toward the middle on exactly the pages worth separating — a thin page
+// and a thorough one should not both come back in the 50s.
+const GEMINI_DEFAULT_MODEL = 'gemini-flash-latest';
 const GROQ_DEFAULT_MODEL = 'openai/gpt-oss-120b';
 const ANTHROPIC_DEFAULT_MODEL = 'claude-opus-5';
 

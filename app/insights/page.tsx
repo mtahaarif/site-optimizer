@@ -1,8 +1,11 @@
 import { connection } from 'next/server';
 import { fetchPageMetrics, fetchQueryMetrics, defaultRange } from '@/src/core/gsc/client.ts';
-import { gscConfigured, gscSiteUrl } from '@/src/core/gsc/auth.ts';
-import { fetchGa4Metrics, ga4Configured, ga4PropertyId } from '@/src/core/ga4/client.ts';
-import { ConnectGuide } from './connect-guide.tsx';
+import { fetchGa4Metrics } from '@/src/core/ga4/client.ts';
+import {
+  allIntegrationStatuses, noteIntegrationError, reusableServiceAccount, PROVIDERS,
+  type Provider,
+} from '@/src/core/integrations/store.ts';
+import { Connections } from './connections.tsx';
 import { pageMeta } from '../meta.ts';
 
 export const instant = false;
@@ -19,19 +22,6 @@ const shortPath = (u: string, max = 52) => {
   try { const x = new URL(u); const s = x.pathname + x.search; return (s === '/' ? x.hostname : s).slice(0, max); }
   catch { return u.slice(0, max); }
 };
-
-function Status({ ok }: { ok: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 border px-2 py-0.5 text-[11px] font-medium"
-      style={{
-        color: ok ? 'rgb(var(--opportunity))' : 'rgb(var(--muted))',
-        borderColor: ok ? 'rgb(var(--opportunity))' : 'rgb(var(--line))',
-      }}>
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: ok ? 'rgb(var(--opportunity))' : 'rgb(var(--muted))' }} />
-      {ok ? 'Connected' : 'Not connected'}
-    </span>
-  );
-}
 
 function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -65,14 +55,31 @@ const Td = ({ children, right, className = '' }: { children: React.ReactNode; ri
 export default async function InsightsPage() {
   await connection();
 
-  const gscOn = gscConfigured();
-  const gaOn = ga4Configured();
+  const [integrations, reusable] = await Promise.all([
+    allIntegrationStatuses(),
+    // What each card can offer as a one-click "use the account already on
+    // file", computed per provider so a card never offers its own account.
+    Promise.all(PROVIDERS.map(async (p) => [p, (await reusableServiceAccount(p))?.account ?? null] as const)),
+  ]);
+  const reusableAccounts = Object.fromEntries(reusable) as Partial<Record<Provider, string | null>>;
+
+  const gscOn = integrations.find((i) => i.provider === 'gsc')?.connected ?? false;
+  const gaOn = integrations.find((i) => i.provider === 'ga4')?.connected ?? false;
+  const gscProperty = integrations.find((i) => i.provider === 'gsc')?.label ?? null;
+  const gaProperty = integrations.find((i) => i.provider === 'ga4')?.label ?? null;
   const range = defaultRange();
 
   const [pages, queries, ga] = await Promise.all([
     gscOn ? fetchPageMetrics() : null,
     gscOn ? fetchQueryMetrics({ limit: 25 }) : null,
     gaOn ? fetchGa4Metrics() : null,
+  ]);
+
+  // Record what the live queries said, so a connection that has since been
+  // revoked shows the reason on its card rather than only inside a report.
+  await Promise.all([
+    gscOn ? noteIntegrationError('gsc', pages?.error ?? null) : null,
+    gaOn ? noteIntegrationError('ga4', ga?.error ?? null) : null,
   ]);
 
   const topPages = pages
@@ -94,48 +101,23 @@ export default async function InsightsPage() {
         <h1 className="text-[30px] font-bold tracking-tight">Search &amp; traffic insights</h1>
         <p className="mt-2 max-w-[70ch] text-[14px] leading-relaxed text-muted">
           What people search to find you, which pages bring the most visits, and how your listings
-          are performing. Connect Google Search Console and Google Analytics to fill this in.
+          are performing. Connect an account below and this page fills in on the next load;
+          disconnect it, or point it at a different property, whenever you like.
         </p>
       </div>
 
       {/* ---- connections ---- */}
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="border border-line bg-surface p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-[15px] font-medium text-ink">Google Search Console</h2>
-              <p className="mt-1 text-[12.5px] text-muted">How you appear in Google search results.</p>
-            </div>
-            <Status ok={gscOn} />
-          </div>
-          {gscOn && (
-            <p className="mt-3 font-mono text-[11.5px] text-muted">
-              {gscSiteUrl()} · {range.startDate} → {range.endDate}
-              {pages?.fromCache && ' · cached'}
-            </p>
-          )}
-          {pages?.error && <p className="mt-3 border border-warning px-3 py-2 text-[12.5px] text-warning">{pages.error}</p>}
-          {!gscOn && <ConnectGuide kind="gsc" />}
-        </div>
+      <Connections integrations={integrations} reusableAccounts={reusableAccounts} />
 
-        <div className="border border-line bg-surface p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-[15px] font-medium text-ink">Google Analytics</h2>
-              <p className="mt-1 text-[12.5px] text-muted">What visitors do once they arrive.</p>
-            </div>
-            <Status ok={gaOn} />
-          </div>
-          {gaOn && (
-            <p className="mt-3 font-mono text-[11.5px] text-muted">
-              Property {ga4PropertyId()} · {range.startDate} → {range.endDate}
-              {ga?.fromCache && ' · cached'}
-            </p>
-          )}
-          {ga?.error && <p className="mt-3 border border-warning px-3 py-2 text-[12.5px] text-warning">{ga.error}</p>}
-          {!gaOn && <ConnectGuide kind="ga4" />}
-        </div>
-      </div>
+      {(gscOn || gaOn) && (
+        <p className="font-mono text-[11.5px] text-muted">
+          {gscOn && `${gscProperty} · `}
+          {gaOn && `${gaProperty} · `}
+          {range.startDate} → {range.endDate}
+          {pages?.fromCache && ' · search cached'}
+          {ga?.fromCache && ' · analytics cached'}
+        </p>
+      )}
 
       {/* ---- search console ---- */}
       {gscOn && pages && !pages.error && (
@@ -244,7 +226,7 @@ export default async function InsightsPage() {
       {!gscOn && !gaOn && (
         <p className="border border-line bg-surface p-8 text-center text-[14px] text-muted">
           Nothing to show yet. Connect Search Console or Analytics above and this page fills in
-          automatically.
+          automatically — no restart, and no environment variables to edit.
         </p>
       )}
     </div>

@@ -12,7 +12,8 @@
  */
 import { all, get, run, tx } from '../../db/index.ts';
 import { normalizeUrl } from '../extract.ts';
-import { getAccessToken, gscSiteUrl, gscConfigured } from './auth.ts';
+import { getAccessToken } from './auth.ts';
+import { gscSettings } from '../integrations/store.ts';
 
 const ENDPOINT = 'https://www.googleapis.com/webmasters/v3/sites';
 const ROW_LIMIT = 25_000;
@@ -146,7 +147,8 @@ export async function fetchPageMetrics(opts: {
   property?: string;
   skipCache?: boolean;
 } = {}): Promise<GscData> {
-  const property = opts.property ?? gscSiteUrl() ?? '';
+  const settings = await gscSettings();
+  const property = opts.property ?? settings?.siteUrl ?? '';
   const range = defaultRange();
   const startDate = opts.startDate ?? range.startDate;
   const endDate = opts.endDate ?? range.endDate;
@@ -157,8 +159,8 @@ export async function fetchPageMetrics(opts: {
     fromCache: false, fetchedAt: Date.now(), error,
   });
 
-  if (!gscConfigured()) {
-    return empty('Search Console is not configured (GOOGLE_SERVICE_ACCOUNT_JSON + GSC_SITE_URL)');
+  if (!settings) {
+    return empty('Search Console is not connected. Connect it on the Insights page.');
   }
 
   if (!opts.skipCache) {
@@ -270,13 +272,14 @@ export async function fetchQueryMetrics(opts: {
   property?: string;
   limit?: number;
 } = {}): Promise<QueryReport> {
-  const property = opts.property ?? gscSiteUrl() ?? '';
+  const settings = await gscSettings();
+  const property = opts.property ?? settings?.siteUrl ?? '';
   const range = defaultRange();
   const startDate = opts.startDate ?? range.startDate;
   const endDate = opts.endDate ?? range.endDate;
   const base = { property, startDate, endDate, rows: [] as QueryMetrics[] };
 
-  if (!gscConfigured()) return { ...base, error: 'Search Console is not connected.' };
+  if (!settings) return { ...base, error: 'Search Console is not connected.' };
 
   try {
     const token = await getAccessToken();

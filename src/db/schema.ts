@@ -353,4 +353,44 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX IF NOT EXISTS idx_loccontent_site ON location_content(site_id, location_id);
   `,
+  // ---- 12: connected third-party accounts -----------------------------------
+  `
+  -- Credentials for the APIs this tool reads from, connected in the UI.
+  --
+  -- These lived in environment variables, which meant connecting Search Console
+  -- was "edit .env.local and restart" and switching to a client's account was
+  -- the same thing again. Env vars are still read as a fallback so an existing
+  -- deployment keeps working, but a row here wins: connecting, disconnecting
+  -- and re-connecting against a different account is a UI action that takes
+  -- effect on the next request.
+  --
+  -- \`config\` is a JSON object whose shape depends on the provider. It holds a
+  -- secret (a service-account private key, an API key), so it is written
+  -- through seal()/unseal() in src/core/integrations/store.ts and is encrypted
+  -- at rest when INTEGRATIONS_SECRET is set. \`account\` and \`label\` are the
+  -- non-secret halves, stored separately so the UI can say which account is
+  -- connected without ever decrypting anything.
+  CREATE TABLE IF NOT EXISTS integrations (
+    provider     TEXT   PRIMARY KEY,   -- gsc | ga4 | pagespeed
+    config       TEXT   NOT NULL,      -- JSON, sealed
+    account      TEXT,                 -- service-account email, or a masked key
+    label        TEXT,                 -- property URL / property name, for display
+    connected_at BIGINT NOT NULL,
+    verified_at  BIGINT,               -- last time Google confirmed the access
+    last_error   TEXT
+  );
+  `,
+  // ---- 13: grading against target locations --------------------------------
+  `
+  -- Which places a grade was made against, and what the model said about each.
+  --
+  -- The grade itself is still one row per (crawl, page) — re-grading a page for
+  -- a different set of places replaces it, because there is only ever one
+  -- current answer to "how good is this page". These two columns record the
+  -- context that answer was produced under, so the UI can say "graded for
+  -- Austin and Dallas" instead of leaving the reader to guess whether the
+  -- location chips were ticked at the time.
+  ALTER TABLE content_grades ADD COLUMN IF NOT EXISTS locations TEXT;
+  ALTER TABLE content_grades ADD COLUMN IF NOT EXISTS local_fit TEXT;
+  `,
 ];

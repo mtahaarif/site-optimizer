@@ -9,6 +9,7 @@
  */
 import { createHash } from 'node:crypto';
 import { get, run } from '../../db/index.ts';
+import { pagespeedSettings } from '../integrations/store.ts';
 import {
   classify, CWV_THRESHOLDS,
   type CoreWebVitalsData, type Metric, type ClsMetric,
@@ -19,8 +20,8 @@ const ENDPOINT = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const TIMEOUT_MS = 30_000;
 
-export function hasApiKey(): boolean {
-  return !!process.env['PAGESPEED_API_KEY']?.trim();
+export async function hasApiKey(): Promise<boolean> {
+  return (await pagespeedSettings()) !== null;
 }
 
 /**
@@ -176,7 +177,7 @@ export async function fetchPagespeed(
   }
 
   const params = new URLSearchParams({ url, strategy, category: 'PERFORMANCE' });
-  const key = process.env['PAGESPEED_API_KEY']?.trim();
+  const key = (await pagespeedSettings())?.apiKey;
   if (key) params.set('key', key);
 
   const controller = new AbortController();
@@ -193,7 +194,7 @@ export async function fetchPagespeed(
         error: {
           url, strategy,
           error: res.status === 429
-            ? `Rate limited by PageSpeed Insights${key ? '' : ' — set PAGESPEED_API_KEY to raise the quota'}: ${msg}`
+            ? `Rate limited by PageSpeed Insights${key ? '' : ' — connect an API key on the Insights page to raise the quota'}: ${msg}`
             : msg,
         },
       };
@@ -279,7 +280,7 @@ export async function runPagespeedBatch(
 ): Promise<PagespeedRun> {
   const results: CoreWebVitalsData[] = [];
   const errors: PagespeedRun['errors'] = [];
-  const keyed = hasApiKey();
+  const keyed = await hasApiKey();
   const gapMs = keyed ? 250 : 1500;
 
   for (let i = 0; i < targets.length; i++) {

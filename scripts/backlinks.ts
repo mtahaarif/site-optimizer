@@ -22,10 +22,10 @@ async function main() {
   if (args[0] === '--import-gsc') {
     const url = args[1];
     if (!url) { console.error('usage: node scripts/backlinks.ts --import-gsc <url>'); return 1; }
-    if (!gscConfigured()) {
-      console.error('Google Search Console is not configured. Set:');
-      console.error('  GOOGLE_SERVICE_ACCOUNT_JSON  (or GOOGLE_APPLICATION_CREDENTIALS)');
-      console.error('  GSC_SITE_URL                 e.g. https://example.com/ or sc-domain:example.com');
+    if (!await gscConfigured()) {
+      console.error('Google Search Console is not connected.');
+      console.error('Connect it on the Insights page — this script reads the same connection');
+      console.error('from POSTGRES_URL, so nothing else needs setting here.');
       return 1;
     }
     const access = await verifyAccess();

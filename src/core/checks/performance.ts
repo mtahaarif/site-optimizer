@@ -308,7 +308,7 @@ const speedSiteChecks: SiteCheck[] = [
     title: 'PageSpeed Insights data collected',
     category: 'page-speed', severity: 'notice',
     why: 'Core Web Vitals are a confirmed ranking factor and cannot be measured from the crawl alone — they need field data from real Chrome users, which only the PageSpeed Insights / CrUX API provides.',
-    fix: 'Set PAGESPEED_API_KEY in .env.local. The key is free from the Google Cloud console and raises the quota from a shared, frequently-exhausted anonymous pool to 25,000 requests/day.',
+    fix: 'Connect a PageSpeed Insights API key on the Insights page. The key is free from the Google Cloud console and raises the quota from a shared, frequently-exhausted anonymous pool to 25,000 requests/day.',
     test: (site) => cwvUnavailable(site) ?? false,
   }),
   siteCheck({

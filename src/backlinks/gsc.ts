@@ -12,100 +12,23 @@
  *     the referring pages that actually drive impressions.
  *  2. GSC caps the export at 1,000 sample links per property.
  *
- * Authentication uses a Google service account with domain-wide access to the
- * property, which avoids an interactive OAuth dance in a cron job.
+ * Authentication is the shared service-account flow in src/core/gsc/auth.ts.
+ * This module used to carry its own copy of the JWT exchange; two
+ * implementations of the same signed assertion is exactly the drift that
+ * extraction was meant to prevent, and only one of them would have learned
+ * about credentials being connected in the UI rather than set in the
+ * environment.
  */
-import { createSign } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { getAccessToken, gscConfigured, verifyAccess } from '../core/gsc/auth.ts';
+import { gscSettings } from '../core/integrations/store.ts';
 
-export interface GscCredentials {
-  client_email: string;
-  private_key: string;
-}
+export type { ServiceAccount as GscCredentials } from '../core/gsc/auth.ts';
+
+export { gscConfigured, verifyAccess };
 
 export interface GscLink {
   sourceUrl: string;
   targetUrl: string | null;
-}
-
-const SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly';
-
-function loadCredentials(): GscCredentials | null {
-  const inline = process.env['GOOGLE_SERVICE_ACCOUNT_JSON'];
-  const file = process.env['GOOGLE_APPLICATION_CREDENTIALS'];
-  try {
-    const raw = inline ?? (file ? readFileSync(file, 'utf8') : null);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<GscCredentials>;
-    if (!parsed.client_email || !parsed.private_key) return null;
-    return { client_email: parsed.client_email, private_key: parsed.private_key.replace(/\\n/g, '\n') };
-  } catch {
-    return null;
-  }
-}
-
-export function gscConfigured(): boolean {
-  return loadCredentials() !== null && !!process.env['GSC_SITE_URL'];
-}
-
-/**
- * Mint a Google OAuth access token from a service account JWT.
- * Implemented directly so the project keeps its zero-dependency posture — the
- * googleapis package is ~50 MB for what is one signed JWT and one POST.
- */
-async function getAccessToken(): Promise<string> {
-  const creds = loadCredentials();
-  if (!creds) throw new Error('No Google service account credentials configured');
-
-  const now = Math.floor(Date.now() / 1000);
-  const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
-
-  const header = b64({ alg: 'RS256', typ: 'JWT' });
-  const claims = b64({
-    iss: creds.client_email,
-    scope: SCOPE,
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600,
-    iat: now,
-  });
-
-  const signer = createSign('RSA-SHA256');
-  signer.update(`${header}.${claims}`);
-  const signature = signer.sign(creds.private_key, 'base64url');
-  const jwt = `${header}.${claims}.${signature}`;
-
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
-    }),
-  });
-
-  if (!res.ok) throw new Error(`Google token exchange failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
-  const data = await res.json() as { access_token?: string };
-  if (!data.access_token) throw new Error('Google token response contained no access_token');
-  return data.access_token;
-}
-
-/** Confirm the service account can actually read the property. */
-export async function verifyAccess(): Promise<{ ok: boolean; siteUrl: string | null; error: string | null }> {
-  const siteUrl = process.env['GSC_SITE_URL'];
-  if (!siteUrl) return { ok: false, siteUrl: null, error: 'GSC_SITE_URL not set' };
-  try {
-    const token = await getAccessToken();
-    const res = await fetch(
-      'https://www.googleapis.com/webmasters/v3/sites/' + encodeURIComponent(siteUrl),
-      { headers: { authorization: 'Bearer ' + token } },
-    );
-    if (!res.ok) {
-      return { ok: false, siteUrl, error: `HTTP ${res.status}: ${(await res.text()).slice(0, 200)}` };
-    }
-    return { ok: true, siteUrl, error: null };
-  } catch (err) {
-    return { ok: false, siteUrl, error: (err as Error).message };
-  }
 }
 
 /**
@@ -116,8 +39,9 @@ export async function verifyAccess(): Promise<{ ok: boolean; siteUrl: string | n
  * useful automated supplement to the manual CSV export.
  */
 export async function fetchReferringPages(days = 90): Promise<string[]> {
-  const siteUrl = process.env['GSC_SITE_URL'];
-  if (!siteUrl) throw new Error('GSC_SITE_URL not set');
+  const settings = await gscSettings();
+  if (!settings) throw new Error('Search Console is not connected.');
+  const { siteUrl } = settings;
 
   const token = await getAccessToken();
   const end = new Date();
