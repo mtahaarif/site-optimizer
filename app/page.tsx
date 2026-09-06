@@ -7,7 +7,7 @@ import { gscConfigured } from '@/src/core/gsc/auth.ts';
 import { ga4Configured } from '@/src/core/ga4/client.ts';
 import { jsDependentPages } from '@/src/core/aeo/analyze.ts';
 import { keywordsWithRanks } from '@/src/ranks/track.ts';
-import { backlinkSummary } from '@/src/backlinks/verify.ts';
+import { backlinkSummaries } from '@/src/backlinks/verify.ts';
 import { ScoreDial, scoreBand, shortUrl, SEVERITY_ORDER, SEVERITY_LABEL } from './ui.tsx';
 import type { Severity } from '@/src/core/scoring/model.ts';
 import { pageMeta } from './meta.ts';
@@ -97,8 +97,17 @@ export default async function Dashboard() {
   // not one captured while prerendering a static shell.
   if (!dbConfigured()) return <SetupRequired />;
 
-  const [reports, sites] = [await listReports(), await listSites()];
-  const [gscOn, gaOn] = await Promise.all([gscConfigured(), ga4Configured()]);
+  // `[await a(), await b()]` reads as parallel and is not — an array literal
+  // evaluates its elements in order, so each await blocks the next. Everything
+  // here that does not depend on another result is issued together.
+  const [reports, sites, gscOn, gaOn, keywords, backlinks] = await Promise.all([
+    listReports(),
+    listSites(),
+    gscConfigured(),
+    ga4Configured(),
+    keywordsWithRanks(),
+    backlinkSummaries(),
+  ]);
   const latest = reports[0] ?? null;
   const report = latest ? await loadReport(latest.id) : null;
 
@@ -107,15 +116,16 @@ export default async function Dashboard() {
   const aiRisk = report ? jsDependentPages(report.pages ?? []).length : null;
 
   // Ranks.
-  const keywords = await keywordsWithRanks();
   const ranked = keywords.filter((k) => k.position !== null);
   const top10 = ranked.filter((k) => (k.position ?? 999) <= 10).length;
   const avgPos = ranked.length
     ? Math.round(ranked.reduce((s, k) => s + (k.position ?? 0), 0) / ranked.length)
     : null;
 
-  // Backlinks — summed over every site.
-  const siteSummaries = await Promise.all(sites.map((site) => backlinkSummary(site.id)));
+  // Backlinks — summed over every site. One grouped query above, not two per
+  // site: at a few hundred milliseconds a round trip this was the single
+  // slowest thing on the dashboard.
+  const siteSummaries = sites.map((site) => backlinks.get(site.id)).filter((s) => s !== undefined);
   const bl = siteSummaries.reduce(
     (acc, b) => {
       acc.active += b.active; acc.lost += b.lost; acc.total += b.total;

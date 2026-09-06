@@ -318,23 +318,59 @@ export interface ProjectSummary {
   isNext: boolean;
 }
 
-/** Every website as a project, with first/latest crawl so a trend is visible at a glance. */
+/**
+ * Every website as a project, with first/latest crawl so a trend is visible at
+ * a glance.
+ *
+ * One query, not `1 + 3N`. The obvious shape — fetch the sites, then per site
+ * ask for the count, the first crawl and the latest — reads well and is a
+ * waterfall: against a hosted database at ~340 ms a round trip, three projects
+ * cost ten sequential trips and over three seconds before a byte is rendered.
+ * The pool deliberately holds a single connection (see src/db/index.ts), so
+ * those trips cannot overlap either.
+ *
+ * `LEFT JOIN LATERAL` lets each subquery reference the site row, so the count
+ * and both edge crawls come back on the same pass. Sites with no crawls still
+ * appear, which is what LEFT preserves and what the projects page needs.
+ */
 export async function listProjects(): Promise<ProjectSummary[]> {
-  const sites = await all<Site>('SELECT * FROM sites ORDER BY created_at DESC');
-  return Promise.all(sites.map(async (s) => {
-    const agg = await get<{ cnt: number }>('SELECT COUNT(*) AS cnt FROM crawls WHERE site_id = ?', s.id);
-    const first = await get<{ score: number; created_at: number }>(
-      'SELECT score, created_at FROM crawls WHERE site_id = ? ORDER BY created_at ASC LIMIT 1', s.id);
-    const latest = await get<{ id: string; score: number; created_at: number; checks_failed: number; is_next: number }>(
-      'SELECT id, score, created_at, checks_failed, is_next FROM crawls WHERE site_id = ? ORDER BY created_at DESC LIMIT 1', s.id);
-    return {
-      siteId: s.id, origin: s.origin, label: s.label,
-      crawlCount: agg?.cnt ?? 0,
-      firstScore: first?.score ?? null, firstAt: first?.created_at ?? null,
-      latestId: latest?.id ?? null, latestScore: latest?.score ?? null,
-      latestAt: latest?.created_at ?? null, latestIssues: latest?.checks_failed ?? null,
-      isNext: !!latest?.is_next,
-    };
+  const rows = await all<{
+    id: number; origin: string; label: string | null;
+    crawl_count: number;
+    first_score: number | null; first_at: number | null;
+    latest_id: string | null; latest_score: number | null; latest_at: number | null;
+    latest_issues: number | null; is_next: number | null;
+  }>(`
+    SELECT s.id, s.origin, s.label,
+           agg.cnt          AS crawl_count,
+           f.score          AS first_score,
+           f.created_at     AS first_at,
+           l.id             AS latest_id,
+           l.score          AS latest_score,
+           l.created_at     AS latest_at,
+           l.checks_failed  AS latest_issues,
+           l.is_next        AS is_next
+    FROM sites s
+    LEFT JOIN LATERAL (
+      SELECT COUNT(*) AS cnt FROM crawls c WHERE c.site_id = s.id
+    ) agg ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT score, created_at FROM crawls c
+      WHERE c.site_id = s.id ORDER BY c.created_at ASC LIMIT 1
+    ) f ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT id, score, created_at, checks_failed, is_next FROM crawls c
+      WHERE c.site_id = s.id ORDER BY c.created_at DESC LIMIT 1
+    ) l ON TRUE
+    ORDER BY s.created_at DESC`);
+
+  return rows.map((r) => ({
+    siteId: r.id, origin: r.origin, label: r.label,
+    crawlCount: Number(r.crawl_count ?? 0),
+    firstScore: r.first_score ?? null, firstAt: r.first_at ?? null,
+    latestId: r.latest_id ?? null, latestScore: r.latest_score ?? null,
+    latestAt: r.latest_at ?? null, latestIssues: r.latest_issues ?? null,
+    isNext: !!r.is_next,
   }));
 }
 

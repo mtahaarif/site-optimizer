@@ -35,10 +35,34 @@ import { MIGRATIONS } from './schema.ts';
  */
 types.setTypeParser(types.builtins.INT8, (value) => Number(value));
 
-const conn = (): string | undefined =>
-  process.env['POSTGRES_URL']
-  ?? process.env['DATABASE_URL']
-  ?? process.env['POSTGRES_URL_NON_POOLING'];
+/**
+ * Say what we already mean about TLS, so the driver stops warning about it.
+ *
+ * `pg` 8.23 warns on every startup that `sslmode=require` (and `prefer`, and
+ * `verify-ca`) are currently treated as aliases for `verify-full`, and that
+ * pg 9 will switch them to libpq semantics — where `require` encrypts but does
+ * *not* verify the certificate. That is a real downgrade waiting to happen: the
+ * hosted connection strings Vercel and Neon hand out all say `sslmode=require`,
+ * and today they get full verification.
+ *
+ * Rewriting it to `verify-full` pins the behaviour we already have rather than
+ * inheriting whichever default the next major picks. Local connections are left
+ * alone — a self-signed certificate on localhost cannot pass verification, and
+ * `sslFor` below already declines to force TLS there.
+ */
+const ALIASED_SSL_MODES = /([?&]sslmode=)(require|prefer|verify-ca)(&|$)/i;
+
+function pinSslMode(url: string): string {
+  const local = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/i.test(url);
+  return local ? url : url.replace(ALIASED_SSL_MODES, '$1verify-full$3');
+}
+
+const conn = (): string | undefined => {
+  const raw = process.env['POSTGRES_URL']
+    ?? process.env['DATABASE_URL']
+    ?? process.env['POSTGRES_URL_NON_POOLING'];
+  return raw ? pinSslMode(raw) : raw;
+};
 
 /**
  * Is a database configured at all?

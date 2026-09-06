@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 
 /**
  * Floating light/dark switch, fixed bottom-right. The initial theme is set
@@ -21,6 +21,21 @@ function currentTheme(): Theme {
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
+
+  // The inline script in <head> sets data-theme during parsing, which is all a
+  // production build needs. In development React's Strict Mode remounts once and
+  // resets <html> to only the attributes it manages from JSX, dropping it — so
+  // the page would render in the wrong palette until the next toggle. Re-applying
+  // in a layout effect runs before paint, and is a no-op in production because
+  // the attribute is already what this sets it to.
+  useLayoutEffect(() => {
+    try {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark' || saved === 'light') {
+        document.documentElement.setAttribute('data-theme', saved);
+      }
+    } catch { /* storage may be blocked */ }
+  }, []);
 
   useEffect(() => {
     setTheme(currentTheme());

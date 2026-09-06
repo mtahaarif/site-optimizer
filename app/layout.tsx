@@ -2,11 +2,18 @@ import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Sidebar } from './nav.tsx';
+import { InlineScript } from './inline-script.tsx';
 import { ThemeToggle } from './theme-toggle.tsx';
 import { siteUrl } from './site-url.ts';
 
 // Runs before paint: applies the saved theme (or the OS preference) so there is
 // no flash of the wrong palette on load.
+//
+// It lives in <head> so it executes before the browser parses any of <body>.
+// Previously it sat as the first child of <body>, which meant React had to
+// reconcile a script element it never renders on the client — the source of both
+// the "Encountered a script tag while rendering React component" warning and the
+// hydration mismatch that followed it.
 const THEME_INIT = `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
@@ -65,8 +72,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${fallback.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <InlineScript html={THEME_INIT} />
+      </head>
       <body className="min-h-screen bg-ground font-sans text-ink">
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         <div className="flex">
           <Sidebar />
           <div className="min-w-0 flex-1">

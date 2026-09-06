@@ -1,6 +1,6 @@
 import { connection } from 'next/server';
 import { listSites } from '@/src/db/index.ts';
-import { listBacklinks, backlinkSummary } from '@/src/backlinks/verify.ts';
+import { listBacklinks, backlinkSummaries, emptyBacklinkSummary } from '@/src/backlinks/verify.ts';
 import { gscConfigured } from '@/src/backlinks/gsc.ts';
 import { Stat } from '../ui.tsx';
 import { pageMeta } from '../meta.ts';
@@ -38,15 +38,30 @@ const host = (url: string): string => {
 export default async function BacklinksPage() {
   await connection();
 
-  const sites = await listSites();
-  const gsc = await gscConfigured();
+  // Three round trips for the whole page rather than 3N + 2. Fetching each
+  // site's links and summary inside the map put two sequential queries per site
+  // behind a single pooled connection, so the page got linearly slower with
+  // every project added.
+  const [sites, gsc, allLinks, summaries] = await Promise.all([
+    listSites(),
+    gscConfigured(),
+    listBacklinks(),
+    backlinkSummaries(),
+  ]);
 
-  const bySite = await Promise.all(sites.map(async (site) => ({
+  const linksBySite = new Map<number, typeof allLinks>();
+  for (const link of allLinks) {
+    const list = linksBySite.get(link.site_id) ?? [];
+    list.push(link);
+    linksBySite.set(link.site_id, list);
+  }
+
+  const bySite = sites.map((site) => ({
     site,
-    links: await listBacklinks(site.id),
-    summary: await backlinkSummary(site.id),
-  })));
-  const anyLinks = bySite.some((s) => s.links.length > 0);
+    links: linksBySite.get(site.id) ?? [],
+    summary: summaries.get(site.id) ?? emptyBacklinkSummary(),
+  }));
+  const anyLinks = allLinks.length > 0;
 
   return (
     <div className="flex flex-col gap-8">

@@ -3,19 +3,26 @@
 @tailwind utilities;
 
 /*
- * Apercu — the product face. Drop the licensed woff2 files into
- * public/fonts/ (see public/fonts/README.md) and they take over automatically;
- * until then the stack falls back to the bundled grotesque, so nothing breaks.
- * Only the Thin weight is wired here by request — add more @font-face blocks if
- * you license the other weights.
+ * Apercu — the product face — is not bundled, because it is licensed and the
+ * woff2 is not in this repository.
+ *
+ * The @font-face block that used to live here declared it unconditionally, so
+ * every page load fetched /fonts/Apercu-Thin.woff2 and got a 404. `font-display:
+ * swap` hid the effect, which is why it survived: the text rendered correctly
+ * from the fallback while each visit still paid for a failed request.
+ *
+ * To enable it: drop the licensed woff2 into public/fonts/ (see
+ * public/fonts/README.md), restore the @font-face block below, and add 'Apercu'
+ * to the front of --font-sans.
+ *
+ *   @font-face {
+ *     font-family: 'Apercu';
+ *     src: url('/fonts/Apercu-Thin.woff2') format('woff2');
+ *     font-weight: 100 500;
+ *     font-style: normal;
+ *     font-display: swap;
+ *   }
  */
-@font-face {
-  font-family: 'Apercu';
-  src: url('/fonts/Apercu-Thin.woff2') format('woff2');
-  font-weight: 100 500;
-  font-style: normal;
-  font-display: swap;
-}
 
 /*
  * One committed look: pure-white ground, near-black ink, hairline rules.
@@ -24,7 +31,8 @@
  * Severity colours stay semantic and separate from anything brand.
  */
 :root {
-  --font-sans: 'Apercu', var(--font-sans-fallback), ui-sans-serif, system-ui, sans-serif;
+  /* Re-add 'Apercu' at the front once the licensed file is in public/fonts/. */
+  --font-sans: var(--font-sans-fallback), ui-sans-serif, system-ui, sans-serif;
 
   --ground: 255 255 255;
   --surface: 255 255 255;
