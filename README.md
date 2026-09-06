@@ -1,23 +1,29 @@
 # SiteChecker
 
 A search-visibility platform for Next.js sites, deployed on Vercel with
-Postgres as its only infrastructure dependency. Seven modules over one
+Postgres as its only infrastructure dependency. Nine modules over one
 database:
 
 1. **Site audit** — crawls any website and runs **332 checks** across 15
    categories, reporting every check pass *or* fail against a strict, published
    scoring rubric.
-2. **Content quality grading** — an LLM editor reads each page's real text and
+2. **Platform detection** — fingerprints 35 platforms from a single response and
+   *gates* checks on the answer, so a WordPress convention is never reported
+   against a static site. Every skip prints its reason.
+3. **Content quality grading** — an LLM editor reads each page's real text and
    scores depth, originality, trust and intent match. The one signal search
    engines actually rank on that markup cannot reveal.
-3. **AI visibility / AEO** — whether ChatGPT, Claude, Perplexity and Google's AI
+4. **AI visibility / AEO** — whether ChatGPT, Claude, Perplexity and Google's AI
    answers can *reach*, *read* and *want to quote* your pages, proven per URL.
-4. **Search & traffic insights** — Search Console and GA4, per page and per
+5. **Target locations** — one list of places, shared by rank tracking and content.
+   A deterministic page × place coverage matrix, then model-written drafts aimed
+   only at the cells worth paying for.
+6. **Search & traffic insights** — Search Console and GA4, per page and per
    query, folded back into the audit as page importance.
-5. **24/7 uptime monitoring** with incident tracking and free email alerts.
-6. **Rank tracking** across Google, Bing, Yahoo and Yandex, by device and city,
+7. **24/7 uptime monitoring** with incident tracking and free email alerts.
+8. **Rank tracking** across Google, Bing, Yahoo and Yandex, by device and city,
    including the Google local map pack.
-7. **Backlink monitoring** — still live? still dofollow? — with lost-link alerts.
+9. **Backlink monitoring** — still live? still dofollow? — with lost-link alerts.
 
 Built as a replacement for [sitechecker.pro](https://sitechecker.pro) and, more
 recently, measured against [MyAIO](https://app.myaio.com) — with full parity on
@@ -40,8 +46,11 @@ Postgres host. Scheduling is OS cron or GitHub Actions, both free.
 - [Architecture](#architecture)
 - [The check registry — all 332](#the-check-registry--all-332)
 - [Do these checks actually move rankings?](#do-these-checks-actually-move-rankings)
+- [Platform detection and check gating](#platform-detection-and-check-gating)
 - [Scoring](#scoring)
+- [The four-pillar rollup](#the-four-pillar-rollup)
 - [Content quality grading](#content-quality-grading)
+- [Target locations and local content](#target-locations-and-local-content)
 - [AI visibility and answer-engine readiness](#ai-visibility-and-answer-engine-readiness)
 - [Projects and trends](#projects-and-trends)
 - [The Next.js pack](#the-nextjs-pack)
@@ -58,6 +67,7 @@ Postgres host. Scheduling is OS cron or GitHub Actions, both free.
 - [Scheduling](#scheduling)
 - [Comparison to sitechecker.pro](#comparison-to-sitecheckerpro)
 - [Comparison to MyAIO](#comparison-to-myaio)
+- [How this rates out of 100](#how-this-rates-out-of-100)
 - [What is still missing](#what-is-still-missing)
 - [Known limitations](#known-limitations)
 - [Project layout](#project-layout)
@@ -140,17 +150,23 @@ Requires **Node 22+** — the CLI scripts rely on native TypeScript stripping, s
 5. **Analyses the whole crawl**: internal link graph, PageRank, orphan detection,
    duplicate title/H1/description/content indexes, TLS certificate, security
    headers, HTTP→HTTPS and www redirect behaviour, soft-404 probe.
-6. **Runs all 332 checks** — each one against every page in its scope.
-7. **Scores** every page and the site, weighted by internal PageRank and, when
-   connected, by real Search Console impressions and GA4 sessions.
-8. **Persists** the report to Postgres (summary columns plus the full JSON blob),
+6. **Fingerprints the platform** across every crawled page, aggregating the
+   per-page verdicts into one site-wide answer with its evidence.
+7. **Runs all 332 checks** — each one against every page in its scope, skipping
+   those the detected platform makes meaningless and recording why.
+8. **Scores** every page and the site, weighted by internal PageRank and, when
+   connected, by real Search Console impressions and GA4 sessions; then rolls the
+   same outcomes up into four pillars.
+9. **Persists** the report to Postgres (summary columns plus the full JSON blob),
    with gzipped HTML snapshots for the code viewer.
 
 Then, on demand and separately from the crawl:
 
-9. **Grades content quality** per page with a model, stored per (crawl, page) so
-   re-opening a report never re-spends.
-10. **Evaluates answer-engine readiness** — live robots parse for 10 AI crawlers,
+10. **Grades content quality** per page with a model, stored per (crawl, page) so
+    re-opening a report never re-spends.
+11. **Scores location coverage** for every page × target place, deterministically
+    and for free, then writes drafts for the cells that need one.
+12. **Evaluates answer-engine readiness** — live robots parse for 10 AI crawlers,
     server-vs-rendered text per page, llms.txt detection and generation.
 
 A 12-page crawl of nextjs.org with resource fetching completes in about 6
@@ -176,7 +192,8 @@ While running, a live phase tracker: robots → sitemaps → crawling → resour
 analysis → checks. When done, four tabs:
 
 **Overview** — score dial, the four-pillar health rollup with a deterministic
-narration, severity counts, crawl stats, Core Web Vitals, traffic card, Next.js
+narration, severity counts, crawl stats, Core Web Vitals, traffic card, the
+detected platform with its evidence and how many checks it let us skip, Next.js
 rendering strategy breakdown, "affected pages by category", and the crawl inputs
 actually used.
 
@@ -206,10 +223,23 @@ each is allowed, per-page proof of what an answer engine sees without JavaScript
 quotable-page analysis, and llms.txt detection plus generation.
 
 ### Content (`/content`)
-Per-page content grading: overall score plus depth, relevance, readability,
-originality, trust and structure, with the model's verdict, strengths and up to
-five specific fixes. Site averages per dimension show what a site is
-systematically bad at.
+Three things on one page, because they answer the same question at different
+resolutions.
+
+**Grades** — per-page content quality: a weighted overall plus depth, relevance,
+readability, originality, trust and structure, with the intent the model
+inferred, its verdict, named strengths and up to five specific fixes. Site
+averages per dimension show what a site is systematically bad at.
+
+**Places** — the target locations for this site, added once and shared with rank
+tracking.
+
+**Coverage matrix** — every crawled page × every target place, scored 0–100 by
+deterministic analysis at no cost, so you can see at a glance which cells are
+weak before spending a single model call on them.
+
+**Workbench** — open one cell and get the gaps in priority order, then either run
+the optimiser or copy the exact prompt it would have sent.
 
 ### Ranks (`/ranks`)
 Live position for a keyword + domain across Google, Bing, Yahoo and Yandex, plus
@@ -239,9 +269,15 @@ GET  /api/crawl/[id]            →  { status, progress, report }
 DELETE /api/crawl/[id]          →  removes a stored report
 GET  /api/crawl/[id]/snapshot   →  stored HTML around a finding
 GET/POST /api/projects          →  project list / create
+DELETE /api/projects/[id]       →  remove a project and its audits
 POST /api/content-grade         →  grade one page, persist the verdict
+GET/POST/DELETE /api/locations  →  target places for a site
+POST /api/locations/optimise    →  advice or a full draft for one page × place
 POST /api/rank                  →  one-off position check (web or local pack)
 POST /api/rank/track            →  refresh tracked keywords
+GET/POST/DELETE /api/integrations  →  connector status and credentials
+POST /api/integrations/discover →  find GSC properties / GA4 streams for an account
+GET  /api/health                →  database reachability and schema version
 ```
 
 Job progress lives in Postgres (`crawl_jobs`), not in process memory: the
@@ -269,30 +305,35 @@ reports land in `crawls` and survive indefinitely.
                     │  post-crawl analysis     │
                     │  PageRank · duplicates · │
                     │  TLS · security headers  │
+                    │  platform fingerprint    │
                     └────────────┬─────────────┘
                                  │ SiteData
                     ┌────────────▼─────────────┐
                     │  checks/registry.ts      │
-                    │  332 checks × scope      │
+                    │  332 checks × scope,     │
+                    │  gated by platform       │
                     └────────────┬─────────────┘
                                  │ CheckOutcome[]
                     ┌────────────▼─────────────┐
                     │  scoring/model.ts        │
-                    │  page + site score       │
+                    │  scoring/pillars.ts      │
+                    │  page + site + 4 pillars │
                     └────────────┬─────────────┘
                                  │ AuditReport
                               dashboard
                                  │
-              ┌──────────────────┴──────────────────┐
-              ▼                                     ▼
-    core/content/grade.ts                  core/aeo/analyze.ts
-    LLM page-quality verdict               crawler access · JS gap ·
-    stored per (crawl, page)               llms.txt · quotability
+        ┌────────────────────────┼────────────────────────┐
+        ▼                        ▼                        ▼
+core/content/grade.ts    core/aeo/analyze.ts    core/locations/*
+LLM page-quality         crawler access ·       coverage matrix ·
+verdict, stored per      JS gap · llms.txt ·    per-place drafts
+(crawl, page)            quotability
 ```
 
-Content grading and AEO analysis deliberately sit **downstream** of the audit
-rather than inside it. Grading costs money per call and AEO needs live fetches of
-`robots.txt` and `llms.txt`; neither belongs on the hot path of a crawl.
+Content grading, location optimisation and AEO analysis deliberately sit
+**downstream** of the audit rather than inside it. Grading and optimisation cost
+money per call; AEO needs live fetches of `robots.txt` and `llms.txt`. None of
+them belongs on the hot path of a crawl.
 
 **Why one parse pass.** `extract.ts` turns a response into a fully populated
 `PageData` record — links with rel/anchor/position, images with dimensions,
@@ -412,6 +453,76 @@ the honest ceiling of what any crawler can tell you.
    Content quality now has [its own module](#content-quality-grading) with a real
    model reading real text. Off-site authority still does not — see
    [What is still missing](#what-is-still-missing).
+4. **Aim before you fire.** A check that cannot apply to the site in front of it
+   is noise regardless of which tier it sits in. See
+   [Platform detection](#platform-detection-and-check-gating).
+
+---
+
+## Platform detection and check gating
+
+`src/core/platform/detect.ts` fingerprints **35 platforms** — CMSs, site
+builders, JavaScript frameworks, commerce platforms and static site generators —
+from material the crawler already has. Only response headers and raw HTML are
+used, so fingerprinting costs nothing on top of the crawl: no extra requests, no
+probe paths.
+
+### Evidence, not a guess
+
+Each rule is a list of weighted signals, and every signal carries a
+human-readable reason that the report prints:
+
+```ts
+{
+  id: 'wordpress', label: 'WordPress', kind: 'cms',
+  signals: [
+    { weight: 0.95, reason: 'links assets from /wp-content/', test: … },
+    { weight: 0.90, reason: 'meta generator names WordPress',  test: … },
+    { weight: 0.50, reason: 'exposes the WordPress REST API link header', test: … },
+  ],
+}
+```
+
+Weights are calibrated by exclusivity. `0.9+` is a signature only that platform
+emits — a `/wp-content/` path, a Shopify global. `0.4–0.6` is strong but shared —
+an `X-Powered-By`, a cookie name. Below that is corroboration only, never enough
+alone. Hits sum and cap at 1.
+
+**A verdict a user cannot audit is worse than no verdict**, because checks are
+skipped on the strength of it. So the report shows the reasons, the confidence,
+and every *other* platform that also matched — a Next.js site behind Vercel
+legitimately matches both.
+
+### How gating works
+
+Two selectors on the check definition, both accepting either a platform id or a
+platform *kind*, so a rule can target a whole family and stay correct as
+platforms are added:
+
+| Selector | Meaning | Example |
+|---|---|---|
+| `onlyOn` | The check is meaningless anywhere else. | A PHP fatal error on a statically generated site. |
+| `notOn` | The pattern is real, but it is how that platform normally works, so reporting it is noise. | Inline style attributes on a drag-and-drop builder. |
+
+Three rules keep this from quietly hiding findings:
+
+1. **An unrecognised site runs everything.** If `platform.id` is `unknown` or
+   confidence is below `0.5`, nothing is gated. A missed finding is worse than a
+   noisy one, and silently skipping checks on a guess would make scores
+   incomparable between sites.
+2. **The whole detected stack gates, not just the winner.** WooCommerce runs on
+   WordPress, so a WordPress-gated check still runs on a WooCommerce site. PHP
+   platforms additionally register `php`.
+3. **Every skip states its reason** — *"Not reported on Wix, where this is
+   normal"* — and the report publishes `platform.checksSkipped`, so a lower
+   checks-run total reads as deliberate rather than as the audit doing less work.
+
+### Why this matters more than another check
+
+Depth without relevance is noise. Reporting `php-fatal-error` against an Astro
+site, or `tags-with-style-attributes` against Webflow, does not make an audit
+more thorough — it makes it less trustworthy, and it costs the reader the time
+to dismiss it. **332 checks aimed is worth more than 332 fired.**
 
 ---
 
@@ -534,6 +645,45 @@ That bug was inflating duplicate-content findings on every site audited.
 
 ---
 
+## The four-pillar rollup
+
+`src/core/scoring/pillars.ts`. A presentation layer over the same check outcomes
+the site score is built from, grouped into the four dimensions a non-specialist
+owner actually reads. This is the direct answer to MyAIO's "Holistic SEO
+Pillars" — computed honestly.
+
+| Pillar | Fed by these check categories |
+|---|---|
+| **Content** | content-relevance, duplicate-content, social-media |
+| **Authority** | links, search-traffic |
+| **Technicals** | indexability, internal, redirects, xml-sitemaps, code-validation, security, nextjs |
+| **UX Signals** | page-speed, mobile-friendly, localization |
+
+Three properties that a flat checkbox tally does not have:
+
+**Severity-weighted, not counted.** Each outcome contributes
+`SEVERITY_WEIGHT + 1`, so a pillar cannot read healthy because forty cosmetic
+notices passed while one blocker failed. The `+ 1` floor means a clean page of
+notice-tier checks still counts toward the ratio rather than dividing by zero.
+
+**Skipped checks are excluded, not counted as passes.** A check gated off by
+platform detection or missing Search Console leaves the ratio untouched. Counting
+it as a pass would inflate every pillar on every site we know least about.
+
+**Authority admits when it is empty.** With no Search Console connected, the
+pillar note reads *"Connect Search Console and track backlinks to ground this in
+real authority"* rather than printing a confident low percentage on data that was
+never fetched. This is the specific failure visible on MyAIO's own dashboard,
+which reads **Authority 2%** beside an unconnected GSC card.
+
+A deterministic narration (`narratePillars`) turns the four numbers into a
+sentence that reads like an AI summary and needs no API key:
+
+> Overall the site is holding, with real gaps at 61/100. Strongest on Technicals
+> (88), weakest on Content (44) — that is where the next fixes pay off most.
+
+---
+
 ## Content quality grading
 
 Every other check in this project measures whether a page is *built* well. This
@@ -578,6 +728,91 @@ shape, so every response is validated against a Zod schema before it is used.
 single biggest ranking factor and it currently lives on its own page and inside
 the AI-readiness score, not inside Technical health. Folding it in is a
 deliberate pending decision — see [What is still missing](#what-is-still-missing).
+
+---
+
+## Target locations and local content
+
+One list of places, added once, shared by two features that ask the same question
+at different angles. Rank tracking asks *"where do I sit in Austin?"*; the
+content optimiser asks *"does this page read as though it serves Austin?"*
+Keeping one list means adding a place puts it in front of both, rather than
+having the same city typed into two features that then disagree about its
+spelling.
+
+### Parsing what someone typed
+
+`parseLocation` is deliberately forgiving. "Austin", "Austin, TX" and "Austin,
+Texas, United States" are all things a person reasonably types, and rejecting two
+of them to enforce a format would be the tool serving itself. The label is kept
+verbatim — it is what gets displayed, and what the SERP provider is handed.
+
+### Coverage: deterministic, free, and honest about its limits
+
+`src/core/locations/coverage.ts` scores one page against one place with no model
+call at all. That is what makes the matrix usable: a site with 40 pages and 6
+locations is **240 cells**, and nobody is going to spend 240 API calls to find
+out which handful need attention.
+
+| Signal | Weight | Why |
+|---|---:|---|
+| Location in `<title>` | 22 | What a search engine leans on hardest for "is this page about this place" |
+| Location in `<h1>` | 20 | Same, plus it is what a person scanning a result sees |
+| Location in meta description | 12 | |
+| Location in any subheading | 12 | |
+| Location in body text | 12 | **Saturates at 3 mentions** |
+| Location segment in the URL path | 10 | |
+| `LocalBusiness` / `PostalAddress` schema | 8 | Detected in raw HTML, JSON-LD or microdata |
+| A street address or postcode on the page | 4 | Regex over body text |
+
+**Body mentions saturate at three on purpose.** The tenth repetition of a city
+name is keyword stuffing, not relevance, and a scale that kept rewarding it would
+be advice to make the page worse.
+
+**Coverage measures presence, not quality.** A page can name Austin in every
+heading and still be nothing but the Dallas page with the city swapped — which is
+exactly the doorway-page pattern Google penalises. The analyser says so rather
+than implying a high score means the page is good. Judging *that* needs the model.
+
+### Optimisation: two paths, one prompt
+
+`buildPrompt` produces the instructions; the API path sends them to the
+configured model, and the copy path hands you the identical text to paste into
+whatever assistant you already pay for. They are built from the same function on
+purpose: **if "copy the prompt" produced something weaker than the API path, the
+option would be a trap** for anyone trying to avoid per-call costs.
+
+Both are grounded in the deterministic coverage analysis rather than asking a
+model to guess what is missing. The prompt states exactly which of the title, H1,
+headings, body, URL and structured data already name the place, so the work is
+targeted instead of a blanket rewrite.
+
+Three guardrails are written into the system prompt:
+
+1. **The doorway page is named as the failure mode.** "One template with the city
+   name swapped, published dozens of times. Google treats that as spam, and it is
+   worthless to the reader. Never produce it."
+2. **`[VERIFY: …]` instead of invention.** Where the model does not know
+   something specific and true about a place, it must leave a marked placeholder.
+   A fabricated local fact is worse than a generic sentence, because it destroys
+   trust the moment a local reader sees it.
+3. **Sibling locations are passed in.** The model is told every *other* place the
+   site targets and instructed that what it writes must not read identically for
+   those.
+
+Output is either advice (`verdict` + `recommendations`) or a full draft (adding
+`title`, `description`, `h1`, `intro`, `sections`, `faqs` and a `rationale`
+naming what was changed and what was left alone), both Zod-validated.
+
+### Location fit inside the content grade
+
+When a site has target places, the content grader is additionally asked to score
+each one — how well the page actually serves someone there: evidence of really
+operating in the area, service areas, travel or delivery, local proof. **The six
+quality dimensions stay location-blind**, so a page cannot score better on depth
+or originality merely for naming more towns. The JSON schema adds `localFit`
+conditionally with `additionalProperties: false`, so a page nobody asked a
+location question about is never answered for.
 
 ---
 
@@ -1076,9 +1311,15 @@ gsc_fetches       Search Console fetch log, one row per date range
 gsc_page_metrics  per-URL clicks, impressions, CTR, position
 ga4_metrics       per-path sessions, users, conversions, bounce rate
 content_grades    one LLM content verdict per (crawl, page)
+locations         target places per site, shared by ranks and content
+location_content  coverage score, signals and generated drafts per page × place
+integrations      connector credentials and their last verified state
 kv_cache          generic cache (currently: PageSpeed Insights responses)
 schema_migrations tracks which migrations have run
 ```
+
+Twenty tables over **13 forward-only migrations**, each applied once inside its
+own transaction.
 
 **Migrations run themselves.** The first query of any kind checks
 `schema_migrations`, a single-row table holding the current version, and
@@ -1156,7 +1397,7 @@ is false:
 
 ```bash
 curl https://your-app.vercel.app/api/health
-# {"ok":true,"database":{"configured":true,"reachable":true,"schemaVersion":10,"sites":0}}
+# {"ok":true,"database":{"configured":true,"reachable":true,"schemaVersion":13,"sites":0}}
 ```
 
 **4. Wire up scheduling** — see [Scheduling](#scheduling) below. The dashboard
@@ -1536,9 +1777,27 @@ position. **Both tools' headline scores measure build quality.** Ours is simply
 honest about it, and weights a blocker 240× a cosmetic notice instead of pricing
 "has a favicon" at half of "Core Web Vitals are good".
 
-Worth noting: the same site reads **65/100 "Optimization Score"** on their
-dashboard and **46/100 "Site Health"** on their audit overview, in the same
-session. Two different numbers for the same crawl, unexplained.
+### Three arithmetic problems visible on their own screens
+
+**Two headline numbers for one crawl.** The same site reads **65/100
+"Optimization Score"** on their dashboard and **46/100 "Site Health"** on their
+audit overview, in the same session — and their Report Builder prints *both*,
+side by side, unreconciled. A score is a promise about comparability; that is the
+promise breaking in public.
+
+**Pillars that contradict the pages.** The dashboard shows **Technicals 100%**
+beside **Flawless Pages 0/52**. Every technical check passing, and not one clean
+page. Both cannot describe the same crawl. Rolling pillars up from a single
+severity-weighted outcome set, as [ours does](#the-four-pillar-rollup), makes
+that state unreachable.
+
+**A share above 100%.** Their Issues page reads *"52 affected pages out of 50
+total pages"*, while Page Explorer reports 52 crawled and Segment Health reports
+50. Our `summarizeByCategory` takes a `countableUrls` set for exactly this
+reason: page checks legitimately fire against fetched assets too — a 404
+stylesheet is a real finding — so without filtering the affected set to crawled
+HTML pages, the count can exceed the denominator and the percentage runs past
+100.
 
 ### Where they are ahead
 
@@ -1558,10 +1817,69 @@ session. Two different numbers for the same crawl, unexplained.
 | **Answer-engine readiness** | We audit 10 AI crawlers, prove per page what an answer engine can read without JavaScript, and generate an llms.txt. Their robots screen says *"New: LLMs.txt — Coming Soon"*, and no AI-visibility module exists anywhere in their dashboard. |
 | **Depth of technical detection** | 332 checks across 15 categories, tiered by real impact. Their Issues page surfaces **five** categories — Page Title, Meta Description, Images Alt Text, OG Meta, Twitter Meta — for a site they say has 174 issues. |
 | **Honest scoring** | Monotonic across 2,000 fuzz trials, rubric-versioned, blocker tier, page-importance weighting, and labelled Technical health. Theirs is a flat additive checkbox tally that reads Authority 2% on data it never fetched. |
-| **Content grading rigour** | Their Scholar returns 12 metrics with no visible rubric. Ours returns 7 dimensions plus a plain-English verdict, named strengths, and up to five page-specific fixes — with a prompt that explicitly forbids generic advice and refuses to reward length. |
+| **Content grading rigour** | Their Scholar returns 12 metrics with no visible rubric. Ours returns 6 dimensions plus a weighted overall, the inferred intent, a plain-English verdict, named strengths, and up to five page-specific fixes — with a prompt that explicitly forbids generic advice and refuses to reward length. |
+| **Aimed checks** | [Platform gating](#platform-detection-and-check-gating) skips what cannot apply and prints the reason. Their audit runs one fixed set against every site regardless of what it is built with. |
 | **Next.js white-box** | 15 framework checks no black-box crawler can produce, and the render-strategy data that makes the AEO analysis possible. |
-| **Correctness loop** | We audit our own app. That found a real crawler bug (alias URLs stored twice and reported as duplicates of themselves) polluting findings on every site. Their product shows no evidence of such a loop, and ships two contradictory scores for one crawl. |
+| **Correctness loop** | We audit our own app. That found a real crawler bug (alias URLs stored twice and reported as duplicates of themselves) polluting findings on every site. Their product shows no evidence of such a loop, and ships three separate arithmetic contradictions on its own screens. |
 | **Cost** | No subscription, no per-seat pricing, no page-count paywall — self-host it or deploy it, at the cost of a database. |
+
+---
+
+## How this rates out of 100
+
+Both products scored across fifteen dimensions on one rubric. Each dimension is
+judged on four equally weighted axes: **coverage** (how much of the surface is
+touched), **depth** (how far past the surface each finding goes), **correctness**
+(whether the measurement is sound and internally consistent), and
+**actionability** (whether it says what to do, and whether it can do it).
+
+**100 means the best implementation shipping in a commercial tool today**, not a
+theoretical ideal. Ahrefs' link index would score in the mid-90s on off-site
+authority; nothing on the market scores above ~30 on measured AI citation,
+because almost nobody measures it. A 40 is not a failing grade — it means half
+the category does this better.
+
+| Band | Weight | Dimension | Us | MyAIO | Δ |
+|---|---:|---|---:|---:|---:|
+| **Diagnosis** | 35% | Audit check depth | **93** | 34 | +59 |
+| | | Framework-native depth | **96** | 0 | +96 |
+| | | Scoring integrity | **95** | 38 | +57 |
+| | | Error & breakage detection | **90** | 38 | +52 |
+| | | On-page & metadata | **88** | 66 | +22 |
+| | | Performance & Core Web Vitals | **74** | 61 | +13 |
+| **Content** | 20% | Content quality measurement | **84** | 68 | +16 |
+| | | Content production | 22 | **86** | −64 |
+| **Off-site & research** | 20% | Off-site authority | 28 | **79** | −51 |
+| | | Keyword & competitor research | 12 | **78** | −66 |
+| **Answer engines** | 10% | AEO readiness | **82** | 6 | +76 |
+| | | Measured AI citation | **48** | 5 | +43 |
+| **Local** | 5% | Local search & Business Profile | 38 | **84** | −46 |
+| **Acting** | 10% | Fix generation & deploy | 18 | **80** | −62 |
+| | | Reporting & scale | 30 | **74** | −44 |
+| | | **Weighted overall** | **56.7** | **57.4** | −0.7 |
+
+### Reading the result
+
+**A dead heat, built from disjoint halves.** We win every diagnostic axis, four
+of them by more than fifty points. They win everything that acts. The tie is
+arithmetic, not diplomacy.
+
+**The weights are the argument, so they are stated.** An optimizer has to both
+find the problem and change it, so diagnosis takes the largest single share at
+35% but nowhere near a majority. Content and off-site sit at 20% each because
+they are the two things Google actually ranks on. Move the weights and the result
+moves: weight diagnosis at 60% and we win by fourteen points; weight it at 15%
+and we lose by twelve. Disagreeing with the total should mean disagreeing with
+the weights, which is why they are published rather than folded in.
+
+**Every deficit is bought or plumbed; every lead is designed.** Our six weak
+dimensions need a link index, a keyword feed, a CMS write path, a PDF renderer.
+Our six strong ones needed thinking. That is a good position intellectually and a
+poor one commercially, because a buyer sees the deficits first — but it also
+means two of the six close with a purchase order rather than a rewrite.
+
+The full teardown, with the per-band arithmetic and the screenshot evidence, is
+kept as a separate living document alongside this repo.
 
 ---
 
@@ -1586,18 +1904,29 @@ decision about what happens on ungraded pages, and re-basing the headline number
 on "ranking signal above hygiene" is impossible while authority is still zero.
 That is the honest reason it has not happened, not an oversight.
 
-Also unbuilt, in rough order of value:
+Also unbuilt, in rough order of value — the weighted cost of each against the
+[ratings above](#how-this-rates-out-of-100) is given where it applies:
 
-- **AI mention measurement.** The technical half of AI visibility is shipped;
-  the measurement half — are we actually *named* in ChatGPT, Claude or Perplexity
-  for a given question — is not.
-- **Keyword research.** Needs a provider. Upstream of any content strategy.
-- **LLM-written metadata fixes with a deploy path.** MyAIO's most commercially
-  obvious feature and our clearest stage-2.
+- **Keyword research** (−13.2 points). Needs a provider. Upstream of any content
+  strategy. Almost certainly the *same* vendor as backlinks, which is why these
+  two are one purchase rather than two projects.
+- **Content production** (−12.8). We grade content and write location drafts. We
+  do not write articles, cluster keywords or build topical maps.
+- **LLM-written metadata fixes with a deploy path** (−6.2). MyAIO's most
+  commercially obvious feature and our clearest stage-2. Most of the hard part is
+  already built: 137 checks resolve to an exact span of stored HTML, which is
+  most of a patch.
+- **Scale past ~2k pages** (−4.4 with reporting). Everything is in memory and the
+  report is one JSON blob.
+- **AI mention measurement** (−5 on that dimension). The technical half of AI
+  visibility is shipped; the measurement half — are we actually *named* in
+  ChatGPT, Claude or Perplexity for a given question — is not. Nothing on the
+  market scores well here, so it is the cheapest available lead.
+- **Google Business Profile management** (−2.3). We check local-pack position and
+  per-place content coverage; we cannot manage a profile, its posts or its
+  reviews.
 - **Scheduled recrawls.** Audits run from the dashboard only; the cron path
   covers uptime, ranks and backlinks.
-- **Scale past ~2k pages.** Everything is in memory and the report is one JSON
-  blob.
 - **Segments** — URL-pattern page grouping, which starts to matter above ~1k URLs.
 - **Ignore/restore UI.** `runAllChecks` accepts an `ignored` set; nothing manages
   it visually.
@@ -1699,22 +2028,38 @@ app/                              Next.js App Router — the dashboard
   crawl/[id]/manage/              robots.txt + sitemap generate-and-copy
 
   insights/                       GSC + GA4 dashboards and setup guides
+  insights/connections.tsx        connector cards, discovery, credential entry
   ai-visibility/                  AEO readiness, crawlers, llms.txt
-  content/                        content grading UI
+  ai-visibility/llms-file.tsx     generated llms.txt with copy
+  content/page.tsx                content shell (server)
+  content/grader.tsx              per-page grades + site dimension averages
+  content/places.tsx              target locations, add and remove
+  content/locations.tsx           page × place coverage matrix
+  content/workbench.tsx           one cell: gaps, optimise, or copy the prompt
+  content/summary.tsx             what the site is systematically bad at
   ranks/                          rank check + tracked keywords + quota
   backlinks/page.tsx              backlink table + summary
   schedule/page.tsx               setup + configuration status
+  robots.ts · sitemap.ts          our own robots.txt and sitemap
+  opengraph-image.tsx             generated OG card
+  meta.ts · site-url.ts           canonical metadata helpers
 
   api/crawl/route.ts              POST start crawl, GET list
   api/crawl/[id]/route.ts         GET status+report, DELETE
   api/crawl/[id]/snapshot/        stored HTML around a finding
   api/projects/                   project CRUD
   api/content-grade/route.ts      grade one page, persist
+  api/locations/route.ts          target places for a site
+  api/locations/optimise/route.ts advice or draft for one page × place
+  api/integrations/               connector credentials + property discovery
+  api/health/route.ts             database reachability and schema version
   api/rank/ · api/rank/track/     one-off and tracked rank checks
 
 src/core/
   extract.ts                      HTML → PageData, one parse pass per page
   nextjs/detect.ts                Next.js fingerprint from headers + raw HTML
+  platform/detect.ts              35 platforms, weighted signals, per-page → site
+  platform/types.ts               platform ids, kinds, selectors
   checks/types.ts                 check DSL, categories, SiteData
   checks/registry.ts              all 332 registered + the runner
   checks/indexability.ts          59
@@ -1736,8 +2081,13 @@ src/core/
   scoring/pagerank.ts             internal link graph, orphan detection
   scoring/demo.ts                 monotonicity fuzz test vs Sitechecker
   content/grade.ts                the LLM content judge + storage
+  locations/store.ts              target places, shared by ranks and content
+  locations/coverage.ts           deterministic page × place scoring, no model call
+  locations/optimise.ts           the prompt, and both ways to run it
   llm/provider.ts                 Gemini / Groq / Anthropic, one JSON interface
   aeo/analyze.ts                  AI crawler access, JS gap, llms.txt, quotability
+  integrations/store.ts           connector credentials in Postgres
+  integrations/verify.ts          live credential checks before saving
   gsc/auth.ts                     shared service-account JWT (GSC + GA4)
   gsc/client.ts                   Search Analytics query + Postgres cache
   ga4/client.ts                   GA4 Data API runReport + 24h cache

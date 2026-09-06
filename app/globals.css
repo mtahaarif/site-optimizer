@@ -19,7 +19,8 @@
 
 /*
  * One committed look: pure-white ground, near-black ink, hairline rules.
- * No dark theme — the design is deliberately single-mode and ultra-minimal.
+ * Light is the base; the dark block below only re-points the same tokens, so
+ * every component keeps one set of colour names and never branches on theme.
  * Severity colours stay semantic and separate from anything brand.
  */
 :root {
