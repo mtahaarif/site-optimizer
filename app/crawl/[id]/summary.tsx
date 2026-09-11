@@ -83,6 +83,9 @@ export function Summary({ report, embedded = false }: { report: AuditReport; emb
           <Link href={`/crawl/${report.id}/manage`} className="border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted hover:border-ink hover:text-ink">
             Robots &amp; sitemap
           </Link>
+          <Link href={`/crawl/${report.id}/report?print=1`} className="border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted hover:border-ink hover:text-ink">
+            Download PDF
+          </Link>
         </div>
       </div>
 
@@ -213,7 +216,13 @@ function PlatformCard({ report }: { report: AuditReport }) {
   );
 }
 
-function Overview({ report }: { report: AuditReport }) {
+/**
+ * The whole overview tab, exported because the printable report renders the
+ * identical set of cards. Sharing the component is what keeps the PDF honest:
+ * a second implementation would drift from this one the first time a card
+ * changed, and the point of the export is that the printed page *is* the page.
+ */
+export function Overview({ report }: { report: AuditReport }) {
   return (
     <div className="flex flex-col gap-8">
       <PillarCard report={report} />

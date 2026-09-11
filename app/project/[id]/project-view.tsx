@@ -213,7 +213,21 @@ export function ProjectAudits({ crawls }: { crawls: ProjectCrawl[] }) {
                 </td>
                 <td className="py-2 pr-4 text-right text-muted">{c.issues}</td>
                 <td className="py-2 text-right">
-                  <Link href={`/crawl/${c.id}`} className="text-accent hover:underline">Open report →</Link>
+                  <span className="inline-flex items-center gap-3">
+                    <Link href={`/crawl/${c.id}`} className="text-accent hover:underline">Open report →</Link>
+                    {/* Opens the printable view with the print dialog already
+                        up, so "PDF" is one click from here. Plain navigation
+                        rather than a download: the file is produced by the
+                        browser's own Save-as-PDF, which keeps the vector text
+                        and live links a rasterised export would lose. */}
+                    <Link
+                      href={`/crawl/${c.id}/report?print=1`}
+                      title="Open the printable report and save it as a PDF"
+                      className="border border-line px-2 py-0.5 text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:border-ink hover:text-ink"
+                    >
+                      PDF
+                    </Link>
+                  </span>
                 </td>
               </tr>
             );
