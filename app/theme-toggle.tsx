@@ -1,26 +1,18 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useLayoutEffect } from 'react';
+import { useTheme } from './theme.ts';
 
 /**
  * Floating light/dark switch, fixed bottom-right. The initial theme is set
  * before paint by an inline script in the root layout (no flash); this button
  * flips it, persists the choice, and broadcasts a `themechange` event so
- * canvas-drawn views (the link graph) can repaint in the new palette.
+ * canvas-drawn views (the link graph) and the report's own switch repaint in
+ * the new palette. The state itself lives in app/theme.ts, shared with them.
  */
 
-type Theme = 'light' | 'dark';
-
-function currentTheme(): Theme {
-  if (typeof document === 'undefined') return 'light';
-  const attr = document.documentElement.getAttribute('data-theme');
-  if (attr === 'dark' || attr === 'light') return attr;
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>('light');
-  const [mounted, setMounted] = useState(false);
+  const { theme, mounted, setTheme } = useTheme();
 
   // The inline script in <head> sets data-theme during parsing, which is all a
   // production build needs. In development React's Strict Mode remounts once and
@@ -37,20 +29,8 @@ export function ThemeToggle() {
     } catch { /* storage may be blocked */ }
   }, []);
 
-  useEffect(() => {
-    setTheme(currentTheme());
-    setMounted(true);
-  }, []);
-
-  function toggle() {
-    const next: Theme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    document.documentElement.setAttribute('data-theme', next);
-    try { localStorage.setItem('theme', next); } catch { /* storage may be blocked */ }
-    window.dispatchEvent(new Event('themechange'));
-  }
-
   const isDark = theme === 'dark';
+  const toggle = () => setTheme(isDark ? 'light' : 'dark');
 
   return (
     <button

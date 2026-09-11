@@ -2,6 +2,7 @@ import { connection } from 'next/server';
 import Link from 'next/link';
 import { projectCrawls, loadReport } from '@/src/crawler/store.ts';
 import { analyzeAeo, generateLlmsTxt } from '@/src/core/aeo/analyze.ts';
+import { fetchAeoFiles } from '@/src/core/aeo/live.ts';
 import { gradesForCrawl } from '@/src/core/content/grade.ts';
 import { listLocations, locationContentForSite } from '@/src/core/locations/store.ts';
 import { ScoreDial, shortUrl } from '../ui.tsx';
@@ -41,17 +42,6 @@ export async function generateMetadata(
   });
 }
 
-async function fetchText(url: string, limit = 40_000): Promise<string | null> {
-  try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 8000);
-    const res = await fetch(url, { signal: ctrl.signal, cache: 'no-store', headers: { 'user-agent': 'SiteCheckerBot/1.0' } });
-    clearTimeout(t);
-    if (!res.ok) return null;
-    return (await res.text()).slice(0, limit);
-  } catch { return null; }
-}
-
 export default async function AiVisibilityPage({
   searchParams,
 }: { searchParams: Promise<{ site?: string }> }) {
@@ -88,10 +78,7 @@ export default async function AiVisibilityPage({
   // paid for them end to end; overlapped with that work they are usually free.
   // `fetchText` resolves to null on any failure, so this promise never rejects
   // and cannot become an unhandled rejection while it is in flight.
-  const liveChecks = Promise.all([
-    fetchText(origin + '/robots.txt'),
-    fetchText(origin + '/llms.txt'),
-  ]);
+  const liveChecks = fetchAeoFiles(origin);
 
   // Answer engines are asked local questions constantly ("best X near me"), and
   // they answer from pages that actually name the place. So the location
